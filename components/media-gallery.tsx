@@ -148,9 +148,8 @@ function VideoPlayer({
 
   const rawUrl = movie.mp4?.max || movie.mp4?.["480"] || movie.webm?.max || movie.webm?.["480"] || ""
   const directUrl = toHttps(rawUrl)
-  const embedUrl = `/api/video-embed?url=${encodeURIComponent(rawUrl)}`
-  console.log("[v0] VideoPlayer movie:", JSON.stringify({ name: movie.name, mp4: movie.mp4, webm: movie.webm }))
-  console.log("[v0] VideoPlayer rawUrl:", rawUrl, "embedUrl:", embedUrl)
+  const hasVideo = rawUrl.length > 0
+  const embedUrl = hasVideo ? `/api/video-embed?url=${encodeURIComponent(rawUrl)}` : ""
 
   return (
     <div
@@ -162,12 +161,21 @@ function VideoPlayer({
     >
       <div className="relative w-full max-w-4xl px-4" onClick={(e) => e.stopPropagation()}>
         <div className="relative aspect-video w-full overflow-hidden rounded-lg bg-black">
-          <iframe
-            src={embedUrl}
-            className="size-full border-0"
-            allow="autoplay; fullscreen"
-            title={movie.name}
-          />
+          {hasVideo ? (
+            <iframe
+              src={embedUrl}
+              className="size-full border-0"
+              allow="autoplay; fullscreen"
+              title={movie.name}
+            />
+          ) : (
+            <div className="flex size-full flex-col items-center justify-center gap-3 text-white">
+              <Play className="size-10 text-white/40" />
+              <p className="text-sm text-white/50">
+                {lang === "tr" ? "Video yuklenemedi" : "Video unavailable"}
+              </p>
+            </div>
+          )}
         </div>
         <div className="mt-3 flex items-center justify-between">
           <p className="text-sm font-medium text-white truncate pr-4">{movie.name}</p>
