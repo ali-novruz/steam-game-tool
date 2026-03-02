@@ -2,7 +2,14 @@
 
 import { useRef, useCallback, useState } from "react"
 import { toPng } from "html-to-image"
-import { Download, Twitter, Instagram, Image as ImageIcon, Copy, Check } from "lucide-react"
+import {
+  Download,
+  Twitter,
+  Instagram,
+  Image as ImageIcon,
+  Copy,
+  Check,
+} from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import type { GameData, Language } from "@/lib/types"
@@ -64,12 +71,18 @@ export function ShareCards({ data, lang }: ShareCardsProps) {
     : game.price_overview?.final_formatted ?? t(lang, "noPrice")
 
   const discountBadge =
-    !game.is_free && game.price_overview && game.price_overview.discount_percent > 0
+    !game.is_free &&
+    game.price_overview &&
+    game.price_overview.discount_percent > 0
       ? `-${game.price_overview.discount_percent}%`
       : null
 
   const storeLink = `https://store.steampowered.com/app/${game.steam_appid}`
-  const genresStr = game.genres?.slice(0, 3).map((g) => g.description).join(" / ") || ""
+  const genresStr =
+    game.genres
+      ?.slice(0, 3)
+      .map((g) => g.description)
+      .join(" / ") || ""
 
   const socialText = [
     game.name,
@@ -77,7 +90,9 @@ export function ShareCards({ data, lang }: ShareCardsProps) {
     plainDesc || "",
     "",
     genresStr ? `Genres: ${genresStr}` : "",
-    reviews.review_score_desc ? `Reviews: ${reviews.review_score_desc} (${positivePercent}% positive)` : "",
+    reviews.review_score_desc
+      ? `Reviews: ${reviews.review_score_desc} (${positivePercent}% positive)`
+      : "",
     game.metacritic ? `Metacritic: ${game.metacritic.score}/100` : "",
     `Price: ${priceText}`,
     "",
@@ -100,7 +115,6 @@ export function ShareCards({ data, lang }: ShareCardsProps) {
         {t(lang, "socialShare")}
       </h3>
 
-      {/* Copyable Social Text */}
       <div className="flex flex-col gap-2">
         <pre className="max-h-36 overflow-y-auto whitespace-pre-wrap break-words rounded-lg bg-secondary p-3 text-xs text-secondary-foreground font-mono leading-relaxed">
           {socialText}
@@ -130,22 +144,28 @@ export function ShareCards({ data, lang }: ShareCardsProps) {
         <TabsList className="w-full grid grid-cols-3">
           <TabsTrigger value="twitter" className="gap-1.5 text-xs">
             <Twitter className="size-3.5" />
-            <span className="hidden sm:inline">{t(lang, "shareTwitter")}</span>
+            <span className="hidden sm:inline">
+              {t(lang, "shareTwitter")}
+            </span>
             <span className="sm:hidden">X</span>
           </TabsTrigger>
           <TabsTrigger value="instagram" className="gap-1.5 text-xs">
             <Instagram className="size-3.5" />
-            <span className="hidden sm:inline">{t(lang, "shareInstagram")}</span>
+            <span className="hidden sm:inline">
+              {t(lang, "shareInstagram")}
+            </span>
             <span className="sm:hidden">IG</span>
           </TabsTrigger>
           <TabsTrigger value="general" className="gap-1.5 text-xs">
             <ImageIcon className="size-3.5" />
-            <span className="hidden sm:inline">{t(lang, "shareGeneral")}</span>
+            <span className="hidden sm:inline">
+              {t(lang, "shareGeneral")}
+            </span>
             <span className="sm:hidden">{t(lang, "share")}</span>
           </TabsTrigger>
         </TabsList>
 
-        {/* Twitter/X Card - 1200x675 aspect ratio */}
+        {/* Twitter/X Card */}
         <TabsContent value="twitter" className="flex flex-col gap-3 mt-4">
           <div className="overflow-x-auto pb-2">
             <div
@@ -161,7 +181,6 @@ export function ShareCards({ data, lang }: ShareCardsProps) {
                   crossOrigin="anonymous"
                 />
                 <div className="absolute inset-0 bg-gradient-to-r from-[#0e1621] via-[#0e1621]/80 to-transparent" />
-
                 <div className="relative flex h-full p-6 gap-5">
                   <div className="flex flex-col justify-between flex-1 min-w-0">
                     <div className="flex flex-col gap-3">
@@ -178,7 +197,6 @@ export function ShareCards({ data, lang }: ShareCardsProps) {
                         {plainDesc}
                       </p>
                     </div>
-
                     <div className="flex flex-col gap-3">
                       <div className="flex flex-wrap gap-1">
                         {game.genres?.slice(0, 3).map((g) => (
@@ -190,7 +208,6 @@ export function ShareCards({ data, lang }: ShareCardsProps) {
                           </span>
                         ))}
                       </div>
-
                       <div className="flex items-center gap-4">
                         {game.metacritic && (
                           <div className="flex items-center gap-1.5">
@@ -234,7 +251,6 @@ export function ShareCards({ data, lang }: ShareCardsProps) {
                       </div>
                     </div>
                   </div>
-
                   <div className="hidden sm:flex w-[200px] shrink-0 items-center">
                     <img
                       src={
@@ -262,7 +278,7 @@ export function ShareCards({ data, lang }: ShareCardsProps) {
           </Button>
         </TabsContent>
 
-        {/* Instagram Story - 1080x1920 aspect ratio */}
+        {/* Instagram Story */}
         <TabsContent value="instagram" className="flex flex-col gap-3 mt-4">
           <div className="overflow-x-auto pb-2 flex justify-center">
             <div
@@ -280,7 +296,6 @@ export function ShareCards({ data, lang }: ShareCardsProps) {
                   crossOrigin="anonymous"
                 />
                 <div className="absolute inset-0 bg-gradient-to-b from-[#0e1621]/90 via-transparent to-[#0e1621]/95" />
-
                 <div className="relative flex flex-col h-full p-5 justify-between">
                   <div className="flex items-center gap-2">
                     <SteamLogo className="size-5 text-[#66c0f4]" />
@@ -288,7 +303,6 @@ export function ShareCards({ data, lang }: ShareCardsProps) {
                       Steam Game Roulette
                     </span>
                   </div>
-
                   <div className="flex flex-col items-center gap-4 text-center">
                     <img
                       src={game.header_image}
@@ -313,13 +327,10 @@ export function ShareCards({ data, lang }: ShareCardsProps) {
                       {plainDesc}
                     </p>
                   </div>
-
                   <div className="flex flex-col gap-3">
                     <div className="grid grid-cols-3 gap-2 text-center">
                       <StatBlock
-                        value={
-                          game.metacritic?.score?.toString() ?? "--"
-                        }
+                        value={game.metacritic?.score?.toString() ?? "--"}
                         label="Metacritic"
                       />
                       <StatBlock
@@ -330,7 +341,10 @@ export function ShareCards({ data, lang }: ShareCardsProps) {
                         }
                         label={t(lang, "positive")}
                       />
-                      <StatBlock value={priceText} label={t(lang, "price")} />
+                      <StatBlock
+                        value={priceText}
+                        label={t(lang, "price")}
+                      />
                     </div>
                     {discountBadge && (
                       <div className="flex justify-center">
@@ -341,7 +355,8 @@ export function ShareCards({ data, lang }: ShareCardsProps) {
                     )}
                     <div className="text-center">
                       <span className="text-[10px] text-white/30">
-                        {"store.steampowered.com/app/"}{game.steam_appid}
+                        {"store.steampowered.com/app/"}
+                        {game.steam_appid}
                       </span>
                     </div>
                   </div>
@@ -365,7 +380,7 @@ export function ShareCards({ data, lang }: ShareCardsProps) {
           </div>
         </TabsContent>
 
-        {/* General Card - 1200x900 */}
+        {/* General Card */}
         <TabsContent value="general" className="flex flex-col gap-3 mt-4">
           <div className="overflow-x-auto pb-2">
             <div
@@ -381,7 +396,6 @@ export function ShareCards({ data, lang }: ShareCardsProps) {
                   crossOrigin="anonymous"
                 />
                 <div className="absolute inset-0 bg-gradient-to-b from-[#0e1621]/60 to-[#0e1621]" />
-
                 <div className="relative flex flex-col h-full p-6 gap-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
@@ -396,7 +410,6 @@ export function ShareCards({ data, lang }: ShareCardsProps) {
                       </span>
                     )}
                   </div>
-
                   <div className="flex gap-5 flex-1 min-h-0">
                     <div className="flex flex-col gap-3 flex-1 min-w-0">
                       <h3 className="text-white text-2xl font-bold leading-tight line-clamp-2">
@@ -415,7 +428,6 @@ export function ShareCards({ data, lang }: ShareCardsProps) {
                       <p className="text-white/50 text-xs leading-relaxed line-clamp-4 flex-1">
                         {plainDesc}
                       </p>
-
                       <div className="flex flex-col gap-1.5 text-xs">
                         {game.developers?.length > 0 && (
                           <div className="flex gap-2">
@@ -439,7 +451,6 @@ export function ShareCards({ data, lang }: ShareCardsProps) {
                         </div>
                       </div>
                     </div>
-
                     <div className="w-[220px] shrink-0 flex flex-col gap-3">
                       <img
                         src={game.header_image}
@@ -457,7 +468,6 @@ export function ShareCards({ data, lang }: ShareCardsProps) {
                       )}
                     </div>
                   </div>
-
                   <div className="flex items-center justify-between rounded-lg bg-white/5 px-4 py-3">
                     {game.metacritic && (
                       <div className="flex items-center gap-2">
