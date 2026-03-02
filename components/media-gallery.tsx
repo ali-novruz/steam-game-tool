@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback, useEffect } from "react"
+import { useState, useCallback, useEffect, useRef } from "react"
 import useEmblaCarousel from "embla-carousel-react"
 import {
   ChevronLeft,
@@ -28,19 +28,23 @@ function useScrollLock(active: boolean) {
   useEffect(() => {
     if (!active) return
     const scrollY = window.scrollY
+    const html = document.documentElement
     const body = document.body
+
+    html.style.overflow = "hidden"
+    body.style.overflow = "hidden"
     body.style.position = "fixed"
     body.style.top = `-${scrollY}px`
     body.style.left = "0"
     body.style.right = "0"
-    body.style.overflow = "hidden"
 
     return () => {
+      html.style.overflow = ""
+      body.style.overflow = ""
       body.style.position = ""
       body.style.top = ""
       body.style.left = ""
       body.style.right = ""
-      body.style.overflow = ""
       window.scrollTo(0, scrollY)
     }
   }, [active])
@@ -50,12 +54,21 @@ function useScrollLock(active: boolean) {
 /*  Helpers                                                            */
 /* ------------------------------------------------------------------ */
 function toHttps(url: string) {
-  if (!url) return ""
-  return url.replace(/^http:\/\//, "https://")
+  return url ? url.replace(/^http:\/\//, "https://") : ""
+}
+
+function proxyImageUrl(raw: string) {
+  if (!raw) return ""
+  return `/api/proxy-image?url=${encodeURIComponent(raw)}`
+}
+
+function proxyVideoUrl(raw: string) {
+  if (!raw) return ""
+  return `/api/proxy-video?url=${encodeURIComponent(raw)}`
 }
 
 /* ------------------------------------------------------------------ */
-/*  Lightbox overlay                                                   */
+/*  Lightbox overlay - fullscreen image with download                  */
 /* ------------------------------------------------------------------ */
 function Lightbox({
   src,
@@ -80,7 +93,7 @@ function Lightbox({
 
   const handleDownload = async () => {
     try {
-      const res = await fetch(`/api/proxy-image?url=${encodeURIComponent(src)}`)
+      const res = await fetch(proxyImageUrl(src))
       const blob = await res.blob()
       const url = URL.createObjectURL(blob)
       const a = document.createElement("a")
@@ -101,6 +114,7 @@ function Lightbox({
       onClick={onClose}
       role="dialog"
       aria-modal="true"
+      aria-label={alt}
     >
       <div
         className="relative max-h-[90vh] max-w-[95vw]"
@@ -149,6 +163,10 @@ function VideoPlayer({
   onClose: () => void
   lang: "tr" | "en"
 }) {
+  const videoRef = useRef<HTMLVideoElement>(null)
+  const [videoError, setVideoError] = useState(false)
+  const [downloadingVideo, setDownloadingVideo] = useState(false)
+
   useScrollLock(true)
 
   useEffect(() => {
@@ -159,11 +177,43 @@ function VideoPlayer({
     return () => document.removeEventListener("keydown", handler)
   }, [onClose])
 
-  // Pick best available URL
-  const rawUrl = movie.mp4?.max || movie.mp4?.["480"] || movie.webm?.max || movie.webm?.["480"] || ""
-  const directUrl = toHttps(rawUrl)
-  // Use our embed route which serves an HTML page with <video> inside it
-  const embedUrl = `/api/video-embed?url=${encodeURIComponent(rawUrl)}`
+  // Raw URLs from Steam API (may be http://)
+  const rawMp4Max = movie.mp4?.max || ""
+  const rawMp4_480 = movie.mp4?.["480"] || ""
+  const rawWebmMax = movie.webm?.max || ""
+  const rawWebm480 = movie.webm?.["480"] || ""
+
+  // Use proxy to avoid mixed-content / CORS issues
+  const mp4MaxProxy = proxyVideoUrl(rawMp4Max)
+  const mp4_480Proxy = proxyVideoUrl(rawMp4_480)
+  const webmMaxProxy = proxyVideoUrl(rawWebmMax)
+  const webm480Proxy = proxyVideoUrl(rawWebm480)
+
+  // Direct HTTPS fallback
+  const directUrl = toHttps(rawMp4Max || rawMp4_480 || rawWebmMax || rawWebm480)
+
+  const handleDownloadVideo = async () => {
+    const raw = rawMp4Max || rawMp4_480
+    if (!raw) return
+    setDownloadingVideo(true)
+    try {
+      const res = await fetch(proxyVideoUrl(raw))
+      const blob = await res.blob()
+      const blobUrl = URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = blobUrl
+      a.download = `${movie.name.replace(/[^a-zA-Z0-9]/g, "_")}.mp4`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(blobUrl)
+    } catch {
+      // Fallback: open direct https in new tab
+      window.open(directUrl, "_blank")
+    } finally {
+      setDownloadingVideo(false)
+    }
+  }
 
   return (
     <div
@@ -178,12 +228,39 @@ function VideoPlayer({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="relative aspect-video w-full overflow-hidden rounded-lg bg-black">
-          <iframe
-            src={embedUrl}
-            className="size-full border-0"
-            allow="autoplay; fullscreen"
-            title={movie.name}
-          />
+          {!videoError ? (
+            <video
+              ref={videoRef}
+              controls
+              autoPlay
+              playsInline
+              className="size-full object-contain"
+              onError={() => setVideoError(true)}
+            >
+              {/* MP4 via proxy - most compatible */}
+              {mp4MaxProxy && <source src={mp4MaxProxy} type="video/mp4" />}
+              {mp4_480Proxy && <source src={mp4_480Proxy} type="video/mp4" />}
+              {/* WebM via proxy fallback */}
+              {webmMaxProxy && <source src={webmMaxProxy} type="video/webm" />}
+              {webm480Proxy && <source src={webm480Proxy} type="video/webm" />}
+              <track kind="captions" />
+            </video>
+          ) : (
+            <div className="flex size-full flex-col items-center justify-center gap-4 text-white">
+              <Play className="size-12 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">
+                {lang === "tr"
+                  ? "Video yuklenemedi. Dogrudan acmayi deneyin:"
+                  : "Video could not load. Try opening directly:"}
+              </p>
+              <Button variant="secondary" size="sm" asChild className="gap-1.5">
+                <a href={directUrl} target="_blank" rel="noopener noreferrer">
+                  <Play className="size-3.5" />
+                  {lang === "tr" ? "Yeni Sekmede Ac" : "Open in New Tab"}
+                </a>
+              </Button>
+            </div>
+          )}
         </div>
         <div className="mt-3 flex items-center justify-between">
           <p className="text-sm font-medium text-white truncate pr-4">
@@ -193,13 +270,14 @@ function VideoPlayer({
             <Button
               variant="secondary"
               size="sm"
-              asChild
+              onClick={handleDownloadVideo}
+              disabled={downloadingVideo}
               className="gap-1.5 bg-white/10 text-white hover:bg-white/20 border-0"
             >
-              <a href={directUrl} target="_blank" rel="noopener noreferrer" download>
-                <Download className="size-3.5" />
-                {lang === "tr" ? "Video Indir" : "Download Video"}
-              </a>
+              <Download className="size-3.5" />
+              {downloadingVideo
+                ? lang === "tr" ? "Indiriliyor..." : "Downloading..."
+                : lang === "tr" ? "Video Indir" : "Download Video"}
             </Button>
             <Button
               variant="secondary"
@@ -228,7 +306,9 @@ export function MediaGallery({
 }: MediaGalleryProps) {
   const [emblaRef, emblaApi] = useEmblaCarousel({ loop: true, align: "start" })
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null)
-  const [activeMovie, setActiveMovie] = useState<SteamGame["movies"][0] | null>(null)
+  const [activeMovie, setActiveMovie] = useState<SteamGame["movies"][0] | null>(
+    null
+  )
 
   const scrollPrev = useCallback(() => emblaApi?.scrollPrev(), [emblaApi])
   const scrollNext = useCallback(() => emblaApi?.scrollNext(), [emblaApi])
@@ -292,6 +372,7 @@ export function MediaGallery({
                       key={ss.id}
                       onClick={() => setLightboxSrc(ss.path_full)}
                       className="group relative aspect-video w-full shrink-0 overflow-hidden rounded-lg bg-secondary cursor-pointer md:w-[calc(50%-0.375rem)]"
+                      aria-label={`${lang === "tr" ? "Buyut" : "Enlarge"}: Screenshot ${ss.id}`}
                     >
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
@@ -319,7 +400,7 @@ export function MediaGallery({
                       "absolute top-1/2 left-2 -translate-y-1/2 rounded-full opacity-80 hover:opacity-100 shadow-lg"
                     )}
                     onClick={scrollPrev}
-                    aria-label="Previous"
+                    aria-label="Previous screenshot"
                   >
                     <ChevronLeft className="size-4" />
                   </Button>
@@ -330,7 +411,7 @@ export function MediaGallery({
                       "absolute top-1/2 right-2 -translate-y-1/2 rounded-full opacity-80 hover:opacity-100 shadow-lg"
                     )}
                     onClick={scrollNext}
-                    aria-label="Next"
+                    aria-label="Next screenshot"
                   >
                     <ChevronRight className="size-4" />
                   </Button>
