@@ -52,47 +52,7 @@ export async function GET() {
         // Reviews fetch failed, use defaults
       }
 
-      // Try to get OpenCritic score if metacritic is missing
-      let metacritic = gameData.metacritic || null
-      if (!metacritic) {
-        try {
-          const ocSearchUrl = `https://api.opencritic.com/api/game/search?criteria=${encodeURIComponent(gameData.name)}`
-          const searchRes = await fetch(ocSearchUrl, {
-            headers: {
-              "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
-              Accept: "application/json",
-            },
-            signal: AbortSignal.timeout(5000),
-          })
-          if (searchRes.ok) {
-            const results = await searchRes.json()
-            if (results?.[0]?.id) {
-              const gameRes = await fetch(
-                `https://api.opencritic.com/api/game/${results[0].id}`,
-                {
-                  headers: {
-                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
-                    Accept: "application/json",
-                  },
-                  signal: AbortSignal.timeout(5000),
-                }
-              )
-              if (gameRes.ok) {
-                const ocData = await gameRes.json()
-                if (ocData?.topCriticScore && ocData.topCriticScore > 0) {
-                  metacritic = {
-                    score: Math.round(ocData.topCriticScore),
-                    url: `https://opencritic.com/game/${ocData.id}/${ocData.name?.toLowerCase().replace(/[^a-z0-9]+/g, "-") || ""}`,
-                    source: "opencritic",
-                  }
-                }
-              }
-            }
-          }
-        } catch {
-          // OpenCritic lookup failed, continue without it
-        }
-      }
+      const metacritic = gameData.metacritic || null
 
       return NextResponse.json({
         game: {

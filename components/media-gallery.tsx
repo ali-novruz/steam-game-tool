@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback, useEffect, useRef } from "react"
+import { useState, useCallback, useEffect } from "react"
 import useEmblaCarousel from "embla-carousel-react"
 import {
   ChevronLeft,
@@ -9,7 +9,6 @@ import {
   X,
   Download,
   Maximize2,
-  ExternalLink,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
@@ -150,10 +149,6 @@ function VideoPlayer({
   onClose: () => void
   lang: "tr" | "en"
 }) {
-  const videoRef = useRef<HTMLVideoElement>(null)
-  const [videoError, setVideoError] = useState(false)
-  const [downloadingVideo, setDownloadingVideo] = useState(false)
-
   useScrollLock(true)
 
   useEffect(() => {
@@ -164,48 +159,11 @@ function VideoPlayer({
     return () => document.removeEventListener("keydown", handler)
   }, [onClose])
 
-  // Convert all video URLs to HTTPS - Steam CDN supports HTTPS natively
-  const mp4Max = toHttps(movie.mp4?.max || "")
-  const mp4_480 = toHttps(movie.mp4?.["480"] || "")
-  const webmMax = toHttps(movie.webm?.max || "")
-  const webm480 = toHttps(movie.webm?.["480"] || "")
-  const bestUrl = mp4Max || mp4_480 || webmMax || webm480
-
-  const handleDownloadVideo = () => {
-    const url = mp4Max || mp4_480
-    if (url) {
-      window.open(url, "_blank")
-    }
-  }
-
-  // Try loading via direct HTTPS fetch with no-cors as test
-  useEffect(() => {
-    if (!videoRef.current || !bestUrl) return
-    const video = videoRef.current
-
-    // Reset state
-    setVideoError(false)
-
-    // Set src directly instead of using <source> elements for better compatibility
-    video.src = bestUrl
-    video.load()
-
-    const onError = () => {
-      // If the direct HTTPS mp4 max failed, try 480p
-      if (video.src === mp4Max && mp4_480) {
-        video.src = mp4_480
-        video.load()
-      } else if (video.src === mp4_480 && webmMax) {
-        video.src = webmMax
-        video.load()
-      } else {
-        setVideoError(true)
-      }
-    }
-
-    video.addEventListener("error", onError)
-    return () => video.removeEventListener("error", onError)
-  }, [bestUrl, mp4Max, mp4_480, webmMax])
+  // Pick best available URL
+  const rawUrl = movie.mp4?.max || movie.mp4?.["480"] || movie.webm?.max || movie.webm?.["480"] || ""
+  const directUrl = toHttps(rawUrl)
+  // Use our embed route which serves an HTML page with <video> inside it
+  const embedUrl = `/api/video-embed?url=${encodeURIComponent(rawUrl)}`
 
   return (
     <div
@@ -220,34 +178,12 @@ function VideoPlayer({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="relative aspect-video w-full overflow-hidden rounded-lg bg-black">
-          {!videoError ? (
-            <video
-              ref={videoRef}
-              controls
-              autoPlay
-              playsInline
-              className="size-full object-contain"
-            >
-              <track kind="captions" />
-            </video>
-          ) : (
-            <div className="flex size-full flex-col items-center justify-center gap-4 text-white">
-              <Play className="size-12 text-muted-foreground" />
-              <p className="text-sm text-muted-foreground text-center px-4">
-                {lang === "tr"
-                  ? "Video burada yuklenemiyor. Asagidaki butonla dogrudan acabilirsiniz:"
-                  : "Video cannot load here. Use the button below to open directly:"}
-              </p>
-              <div className="flex gap-2">
-                <Button variant="secondary" size="sm" asChild className="gap-1.5">
-                  <a href={bestUrl} target="_blank" rel="noopener noreferrer">
-                    <ExternalLink className="size-3.5" />
-                    {lang === "tr" ? "Tarayicida Ac" : "Open in Browser"}
-                  </a>
-                </Button>
-              </div>
-            </div>
-          )}
+          <iframe
+            src={embedUrl}
+            className="size-full border-0"
+            allow="autoplay; fullscreen"
+            title={movie.name}
+          />
         </div>
         <div className="mt-3 flex items-center justify-between">
           <p className="text-sm font-medium text-white truncate pr-4">
@@ -257,12 +193,13 @@ function VideoPlayer({
             <Button
               variant="secondary"
               size="sm"
-              onClick={handleDownloadVideo}
-              disabled={downloadingVideo}
+              asChild
               className="gap-1.5 bg-white/10 text-white hover:bg-white/20 border-0"
             >
-              <Download className="size-3.5" />
-              {lang === "tr" ? "Video Indir" : "Download Video"}
+              <a href={directUrl} target="_blank" rel="noopener noreferrer" download>
+                <Download className="size-3.5" />
+                {lang === "tr" ? "Video Indir" : "Download Video"}
+              </a>
             </Button>
             <Button
               variant="secondary"
