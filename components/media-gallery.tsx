@@ -21,34 +21,38 @@ interface MediaGalleryProps {
   lang: "tr" | "en"
 }
 
+function toHttps(url: string) {
+  return url ? url.replace(/^http:\/\//, "https://") : ""
+}
+
 /* ------------------------------------------------------------------ */
-/*  Scroll lock helper                                                 */
+/*  Scroll lock                                                        */
 /* ------------------------------------------------------------------ */
 function useScrollLock(active: boolean) {
   useEffect(() => {
     if (!active) return
     const scrollY = window.scrollY
-    document.body.style.overflow = "hidden"
-    document.body.style.position = "fixed"
-    document.body.style.top = `-${scrollY}px`
-    document.body.style.left = "0"
-    document.body.style.right = "0"
-    document.body.style.width = "100%"
-
+    const body = document.body
+    body.style.position = "fixed"
+    body.style.top = `-${scrollY}px`
+    body.style.left = "0"
+    body.style.right = "0"
+    body.style.overflow = "hidden"
+    body.style.width = "100%"
     return () => {
-      document.body.style.overflow = ""
-      document.body.style.position = ""
-      document.body.style.top = ""
-      document.body.style.left = ""
-      document.body.style.right = ""
-      document.body.style.width = ""
+      body.style.position = ""
+      body.style.top = ""
+      body.style.left = ""
+      body.style.right = ""
+      body.style.overflow = ""
+      body.style.width = ""
       window.scrollTo(0, scrollY)
     }
   }, [active])
 }
 
 /* ------------------------------------------------------------------ */
-/*  Lightbox overlay - fullscreen image with download                  */
+/*  Lightbox                                                           */
 /* ------------------------------------------------------------------ */
 function Lightbox({
   src,
@@ -64,9 +68,7 @@ function Lightbox({
   useScrollLock(true)
 
   useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose()
-    }
+    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose() }
     document.addEventListener("keydown", handler)
     return () => document.removeEventListener("keydown", handler)
   }, [onClose])
@@ -97,16 +99,8 @@ function Lightbox({
       aria-modal="true"
       aria-label={alt}
     >
-      <div
-        className="relative max-h-[90vh] max-w-[95vw]"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={src}
-          alt={alt}
-          className="max-h-[85vh] max-w-full rounded-lg object-contain"
-        />
+      <div className="relative max-h-[90vh] max-w-[95vw]" onClick={(e) => e.stopPropagation()}>
+        <img src={src} alt={alt} className="max-h-[85vh] max-w-full rounded-lg object-contain" />
         <div className="absolute top-3 right-3 flex gap-2">
           <Button
             variant="secondary"
@@ -133,34 +127,28 @@ function Lightbox({
 }
 
 /* ------------------------------------------------------------------ */
-/*  Video Player overlay - uses Steam embed iframe                    */
+/*  Video Player - iframe-based for reliable playback                  */
 /* ------------------------------------------------------------------ */
 function VideoPlayer({
   movie,
   onClose,
+  lang,
 }: {
   movie: SteamGame["movies"][0]
   onClose: () => void
+  lang: "tr" | "en"
 }) {
   useScrollLock(true)
 
   useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose()
-    }
+    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose() }
     document.addEventListener("keydown", handler)
     return () => document.removeEventListener("keydown", handler)
   }, [onClose])
 
-  // Use direct HTTPS URLs for video
-  const mp4Url = (movie.mp4?.max || movie.mp4?.["480"] || "").replace(
-    /^http:\/\//,
-    "https://"
-  )
-  const webmUrl = (movie.webm?.max || movie.webm?.["480"] || "").replace(
-    /^http:\/\//,
-    "https://"
-  )
+  const rawUrl = movie.mp4?.max || movie.mp4?.["480"] || movie.webm?.max || movie.webm?.["480"] || ""
+  const directUrl = toHttps(rawUrl)
+  const embedUrl = `/api/video-embed?url=${encodeURIComponent(rawUrl)}`
 
   return (
     <div
@@ -170,35 +158,39 @@ function VideoPlayer({
       aria-modal="true"
       aria-label={movie.name}
     >
-      <div
-        className="relative w-full max-w-4xl px-4"
-        onClick={(e) => e.stopPropagation()}
-      >
+      <div className="relative w-full max-w-4xl px-4" onClick={(e) => e.stopPropagation()}>
         <div className="relative aspect-video w-full overflow-hidden rounded-lg bg-black">
-          <video
-            controls
-            autoPlay
-            playsInline
-            className="size-full object-contain"
-          >
-            {mp4Url && <source src={mp4Url} type="video/mp4" />}
-            {webmUrl && <source src={webmUrl} type="video/webm" />}
-            <track kind="captions" />
-          </video>
+          <iframe
+            src={embedUrl}
+            className="size-full border-0"
+            allow="autoplay; fullscreen"
+            title={movie.name}
+          />
         </div>
         <div className="mt-3 flex items-center justify-between">
-          <p className="text-sm font-medium text-white truncate pr-4">
-            {movie.name}
-          </p>
-          <Button
-            variant="secondary"
-            size="icon-sm"
-            onClick={onClose}
-            aria-label="Close"
-            className="rounded-full bg-white/10 text-white hover:bg-white/20 border-0"
-          >
-            <X className="size-4" />
-          </Button>
+          <p className="text-sm font-medium text-white truncate pr-4">{movie.name}</p>
+          <div className="flex gap-2 shrink-0">
+            <Button
+              variant="secondary"
+              size="sm"
+              asChild
+              className="gap-1.5 bg-white/10 text-white hover:bg-white/20 border-0"
+            >
+              <a href={directUrl} target="_blank" rel="noopener noreferrer">
+                <Download className="size-3.5" />
+                {lang === "tr" ? "Video Indir" : "Download"}
+              </a>
+            </Button>
+            <Button
+              variant="secondary"
+              size="icon-sm"
+              onClick={onClose}
+              aria-label="Close"
+              className="rounded-full bg-white/10 text-white hover:bg-white/20 border-0"
+            >
+              <X className="size-4" />
+            </Button>
+          </div>
         </div>
       </div>
     </div>
@@ -216,9 +208,7 @@ export function MediaGallery({
 }: MediaGalleryProps) {
   const [emblaRef, emblaApi] = useEmblaCarousel({ loop: true, align: "start" })
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null)
-  const [activeMovie, setActiveMovie] = useState<SteamGame["movies"][0] | null>(
-    null
-  )
+  const [activeMovie, setActiveMovie] = useState<SteamGame["movies"][0] | null>(null)
 
   const scrollPrev = useCallback(() => emblaApi?.scrollPrev(), [emblaApi])
   const scrollNext = useCallback(() => emblaApi?.scrollNext(), [emblaApi])
@@ -234,9 +224,7 @@ export function MediaGallery({
         {/* Trailers */}
         {hasMovies && (
           <div className="flex flex-col gap-2">
-            <h3 className="text-sm font-medium text-muted-foreground">
-              {trailerLabel}
-            </h3>
+            <h3 className="text-sm font-medium text-muted-foreground">{trailerLabel}</h3>
             <div className="flex gap-2 overflow-x-auto pb-1">
               {game.movies.map((movie) => (
                 <button
@@ -250,7 +238,6 @@ export function MediaGallery({
                   className="group relative aspect-video w-48 shrink-0 overflow-hidden rounded-lg bg-secondary cursor-pointer"
                   aria-label={`${lang === "tr" ? "Oynat" : "Play"}: ${movie.name}`}
                 >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={movie.thumbnail}
                     alt={movie.name}
@@ -258,15 +245,10 @@ export function MediaGallery({
                   />
                   <div className="absolute inset-0 flex items-center justify-center bg-black/40 transition-colors group-hover:bg-black/20">
                     <div className="flex size-12 items-center justify-center rounded-full bg-primary/90 shadow-lg transition-transform group-hover:scale-110">
-                      <Play
-                        className="size-5 text-primary-foreground ml-0.5"
-                        fill="currentColor"
-                      />
+                      <Play className="size-5 text-primary-foreground ml-0.5" fill="currentColor" />
                     </div>
                   </div>
-                  <p className="absolute bottom-1.5 left-2 right-2 truncate text-[11px] font-medium text-white drop-shadow">
-                    {movie.name}
-                  </p>
+                  <p className="absolute bottom-1.5 left-2 right-2 truncate text-[11px] font-medium text-white drop-shadow">{movie.name}</p>
                 </button>
               ))}
             </div>
@@ -276,9 +258,7 @@ export function MediaGallery({
         {/* Screenshots */}
         {hasScreenshots && (
           <div className="flex flex-col gap-2">
-            <h3 className="text-sm font-medium text-muted-foreground">
-              {screenshotsLabel}
-            </h3>
+            <h3 className="text-sm font-medium text-muted-foreground">{screenshotsLabel}</h3>
             <div className="relative">
               <div ref={emblaRef} className="overflow-hidden rounded-lg">
                 <div className="flex gap-3">
@@ -294,7 +274,6 @@ export function MediaGallery({
                       className="group relative aspect-video w-full shrink-0 overflow-hidden rounded-lg bg-secondary cursor-pointer md:w-[calc(50%-0.375rem)]"
                       aria-label={`${lang === "tr" ? "Buyut" : "Enlarge"}: Screenshot ${ss.id}`}
                     >
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={ss.path_full}
                         alt={`Screenshot ${ss.id}`}
@@ -316,9 +295,7 @@ export function MediaGallery({
                   <Button
                     variant="secondary"
                     size="icon-sm"
-                    className={cn(
-                      "absolute top-1/2 left-2 -translate-y-1/2 rounded-full opacity-80 hover:opacity-100 shadow-lg"
-                    )}
+                    className={cn("absolute top-1/2 left-2 -translate-y-1/2 rounded-full opacity-80 hover:opacity-100 shadow-lg")}
                     onClick={scrollPrev}
                     aria-label="Previous screenshot"
                   >
@@ -327,9 +304,7 @@ export function MediaGallery({
                   <Button
                     variant="secondary"
                     size="icon-sm"
-                    className={cn(
-                      "absolute top-1/2 right-2 -translate-y-1/2 rounded-full opacity-80 hover:opacity-100 shadow-lg"
-                    )}
+                    className={cn("absolute top-1/2 right-2 -translate-y-1/2 rounded-full opacity-80 hover:opacity-100 shadow-lg")}
                     onClick={scrollNext}
                     aria-label="Next screenshot"
                   >
@@ -357,6 +332,7 @@ export function MediaGallery({
         <VideoPlayer
           movie={activeMovie}
           onClose={() => setActiveMovie(null)}
+          lang={lang}
         />
       )}
     </>
