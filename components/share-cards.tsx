@@ -2,7 +2,7 @@
 
 import { useRef, useCallback, useState } from "react"
 import { toPng } from "html-to-image"
-import { Download, Twitter, Instagram, Image as ImageIcon } from "lucide-react"
+import { Download, Twitter, Instagram, Image as ImageIcon, Copy, Check } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import type { GameData, Language } from "@/lib/types"
@@ -19,6 +19,7 @@ export function ShareCards({ data, lang }: ShareCardsProps) {
   const instaRef = useRef<HTMLDivElement>(null)
   const generalRef = useRef<HTMLDivElement>(null)
   const [downloading, setDownloading] = useState<string | null>(null)
+  const [copied, setCopied] = useState(false)
 
   const { game, reviews } = data
 
@@ -67,11 +68,63 @@ export function ShareCards({ data, lang }: ShareCardsProps) {
       ? `-${game.price_overview.discount_percent}%`
       : null
 
+  const storeLink = `https://store.steampowered.com/app/${game.steam_appid}`
+  const genresStr = game.genres?.slice(0, 3).map((g) => g.description).join(" / ") || ""
+
+  const socialText = [
+    game.name,
+    "",
+    plainDesc || "",
+    "",
+    genresStr ? `Genres: ${genresStr}` : "",
+    reviews.review_score_desc ? `Reviews: ${reviews.review_score_desc} (${positivePercent}% positive)` : "",
+    game.metacritic ? `Metacritic: ${game.metacritic.score}/100` : "",
+    `Price: ${priceText}`,
+    "",
+    storeLink,
+    "",
+    "#Steam #Gaming #SteamGameRoulette",
+  ]
+    .filter(Boolean)
+    .join("\n")
+
+  const handleCopyText = async () => {
+    await navigator.clipboard.writeText(socialText)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
   return (
     <div className="flex flex-col gap-4">
       <h3 className="text-sm font-semibold text-foreground">
         {t(lang, "socialShare")}
       </h3>
+
+      {/* Copyable Social Text */}
+      <div className="flex flex-col gap-2">
+        <pre className="max-h-36 overflow-y-auto whitespace-pre-wrap break-words rounded-lg bg-secondary p-3 text-xs text-secondary-foreground font-mono leading-relaxed">
+          {socialText}
+        </pre>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleCopyText}
+          className="w-fit gap-1.5"
+        >
+          {copied ? (
+            <Check className="size-3.5" />
+          ) : (
+            <Copy className="size-3.5" />
+          )}
+          {copied
+            ? lang === "tr"
+              ? "Kopyalandi!"
+              : "Copied!"
+            : lang === "tr"
+              ? "Metni Kopyala"
+              : "Copy Text"}
+        </Button>
+      </div>
 
       <Tabs defaultValue="twitter" className="w-full">
         <TabsList className="w-full grid grid-cols-3">
