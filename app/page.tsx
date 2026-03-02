@@ -2,12 +2,13 @@
 
 import { useState, useCallback, useEffect } from "react"
 import { useTheme } from "next-themes"
-import { Moon, Sun, AlertCircle, Copy, Check, ExternalLink } from "lucide-react"
+import { Moon, Sun, AlertCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { GenerateButton } from "@/components/generate-button"
 import { LanguageSwitcher } from "@/components/language-switcher"
 import { GameCard } from "@/components/game-card"
 import { GameSkeleton } from "@/components/game-skeleton"
+import { SocialShare } from "@/components/social-share"
 import type { GameData, Language } from "@/lib/types"
 import { t } from "@/lib/i18n"
 
@@ -17,7 +18,6 @@ export default function Home() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(false)
   const [mounted, setMounted] = useState(false)
-  const [copied, setCopied] = useState(false)
   const { setTheme, resolvedTheme } = useTheme()
 
   useEffect(() => {
@@ -48,44 +48,6 @@ export default function Home() {
     setTheme(resolvedTheme === "dark" ? "light" : "dark")
   }, [resolvedTheme, setTheme])
 
-  const buildShareText = useCallback(() => {
-    if (!gameData) return ""
-    const { game, reviews } = gameData
-    const plain = game.short_description.replace(/<[^>]*>/g, "")
-    const genres = game.genres?.slice(0, 3).map((g) => g.description).join(" / ") || ""
-    const price = game.is_free
-      ? "Free"
-      : game.price_overview?.final_formatted || "N/A"
-    const total = reviews.total_positive + reviews.total_negative
-    const pct = total > 0 ? Math.round((reviews.total_positive / total) * 100) : 0
-
-    return [
-      game.name,
-      "",
-      plain,
-      "",
-      genres ? `Genres: ${genres}` : "",
-      reviews.review_score_desc
-        ? `Reviews: ${reviews.review_score_desc} (${pct}% positive)`
-        : "",
-      game.metacritic ? `Metacritic: ${game.metacritic.score}/100` : "",
-      `Price: ${price}`,
-      "",
-      `https://store.steampowered.com/app/${game.steam_appid}`,
-      "",
-      "#Steam #Gaming #SteamGameRoulette",
-    ]
-      .filter(Boolean)
-      .join("\n")
-  }, [gameData])
-
-  const handleCopyShare = async () => {
-    const text = buildShareText()
-    await navigator.clipboard.writeText(text)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
-  }
-
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -106,22 +68,22 @@ export default function Home() {
           </div>
           <div className="flex items-center gap-2">
             <LanguageSwitcher lang={lang} onToggle={toggleLang} />
-            <Button
-              variant="outline"
-              size="icon-sm"
-              onClick={toggleTheme}
-              aria-label="Toggle theme"
-            >
-              {mounted ? (
-                resolvedTheme === "dark" ? (
+            {mounted ? (
+              <Button
+                variant="outline"
+                size="icon-sm"
+                onClick={toggleTheme}
+                aria-label="Toggle theme"
+              >
+                {resolvedTheme === "dark" ? (
                   <Sun className="size-4" />
                 ) : (
                   <Moon className="size-4" />
-                )
-              ) : (
-                <span className="size-4" />
-              )}
-            </Button>
+                )}
+              </Button>
+            ) : (
+              <div className="size-8" />
+            )}
           </div>
         </div>
       </header>
@@ -157,7 +119,6 @@ export default function Home() {
               loadingLabel={t(lang, "discovering")}
               newGameLabel={t(lang, "newGame")}
             />
-
           </section>
         )}
 
@@ -210,48 +171,7 @@ export default function Home() {
               />
             </div>
             <GameCard data={gameData} lang={lang} />
-
-            {/* Share Section */}
-            <div className="flex flex-col gap-3 rounded-xl border bg-card/80 backdrop-blur-sm p-4">
-              <h3 className="text-sm font-semibold text-foreground">
-                {t(lang, "socialShare")}
-              </h3>
-              <pre className="max-h-36 overflow-y-auto whitespace-pre-wrap break-words rounded-lg bg-secondary p-3 text-xs text-secondary-foreground font-mono leading-relaxed">
-                {buildShareText()}
-              </pre>
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleCopyShare}
-                  className="gap-1.5"
-                >
-                  {copied ? (
-                    <Check className="size-3.5" />
-                  ) : (
-                    <Copy className="size-3.5" />
-                  )}
-                  {copied
-                    ? lang === "tr"
-                      ? "Kopyalandi!"
-                      : "Copied!"
-                    : lang === "tr"
-                      ? "Metni Kopyala"
-                      : "Copy Text"}
-                </Button>
-                <Button variant="outline" size="sm" asChild>
-                  <a
-                    href={`https://store.steampowered.com/app/${gameData.game.steam_appid}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="gap-1.5"
-                  >
-                    <ExternalLink className="size-3.5" />
-                    {t(lang, "viewOnSteam")}
-                  </a>
-                </Button>
-              </div>
-            </div>
+            <SocialShare data={gameData} lang={lang} />
           </section>
         )}
       </main>
