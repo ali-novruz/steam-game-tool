@@ -22,6 +22,44 @@ interface MediaGalleryProps {
 }
 
 /* ------------------------------------------------------------------ */
+/*  Scroll lock helper                                                 */
+/* ------------------------------------------------------------------ */
+function useScrollLock(active: boolean) {
+  useEffect(() => {
+    if (!active) return
+    const scrollY = window.scrollY
+    const html = document.documentElement
+    const body = document.body
+
+    html.style.overflow = "hidden"
+    body.style.overflow = "hidden"
+    body.style.position = "fixed"
+    body.style.top = `-${scrollY}px`
+    body.style.left = "0"
+    body.style.right = "0"
+
+    return () => {
+      html.style.overflow = ""
+      body.style.overflow = ""
+      body.style.position = ""
+      body.style.top = ""
+      body.style.left = ""
+      body.style.right = ""
+      window.scrollTo(0, scrollY)
+    }
+  }, [active])
+}
+
+/* ------------------------------------------------------------------ */
+/*  Helpers - proxy Steam URLs                                         */
+/* ------------------------------------------------------------------ */
+function proxyUrl(raw: string, type: "image" | "video") {
+  if (!raw) return ""
+  const endpoint = type === "image" ? "/api/proxy-image" : "/api/proxy-video"
+  return `${endpoint}?url=${encodeURIComponent(raw)}`
+}
+
+/* ------------------------------------------------------------------ */
 /*  Lightbox overlay - fullscreen image with download                  */
 /* ------------------------------------------------------------------ */
 function Lightbox({
@@ -35,21 +73,19 @@ function Lightbox({
   onClose: () => void
   downloadLabel: string
 }) {
+  useScrollLock(true)
+
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose()
     }
     document.addEventListener("keydown", handler)
-    document.body.style.overflow = "hidden"
-    return () => {
-      document.removeEventListener("keydown", handler)
-      document.body.style.overflow = ""
-    }
+    return () => document.removeEventListener("keydown", handler)
   }, [onClose])
 
   const handleDownload = async () => {
     try {
-      const res = await fetch(`/api/proxy-image?url=${encodeURIComponent(src)}`)
+      const res = await fetch(proxyUrl(src, "image"))
       const blob = await res.blob()
       const url = URL.createObjectURL(blob)
       const a = document.createElement("a")
@@ -81,7 +117,6 @@ function Lightbox({
           src={src}
           alt={alt}
           className="max-h-[85vh] max-w-full rounded-lg object-contain"
-          crossOrigin="anonymous"
         />
         <div className="absolute top-3 right-3 flex gap-2">
           <Button
@@ -121,25 +156,36 @@ function VideoPlayer({
   lang: "tr" | "en"
 }) {
   const videoRef = useRef<HTMLVideoElement>(null)
+  const [videoError, setVideoError] = useState(false)
+
+  useScrollLock(true)
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose()
     }
     document.addEventListener("keydown", handler)
-    document.body.style.overflow = "hidden"
-    return () => {
-      document.removeEventListener("keydown", handler)
-      document.body.style.overflow = ""
-    }
+    return () => document.removeEventListener("keydown", handler)
   }, [onClose])
 
-  const videoUrl = movie.webm?.max || movie.webm?.["480"] || movie.mp4?.max || movie.mp4?.["480"] || ""
+  // Build proxied source URLs
+  const mp4Max = movie.mp4?.max || ""
+  const mp4_480 = movie.mp4?.["480"] || ""
+  const webmMax = movie.webm?.max || ""
+  const webm480 = movie.webm?.["480"] || ""
+
+  // Prefer mp4 through proxy (more compatible)
+  const primarySrc = mp4Max || mp4_480 || webmMax || webm480
+  const proxiedSrc = primarySrc ? proxyUrl(primarySrc, "video") : ""
+
+  // Fallback: try direct https version
+  const directSrc = primarySrc ? primarySrc.replace(/^http:\/\//, "https://") : ""
 
   const handleDownloadVideo = () => {
-    const mp4Url = movie.mp4?.max || movie.mp4?.["480"] || ""
-    if (mp4Url) {
-      window.open(mp4Url, "_blank")
+    const downloadUrl = mp4Max || mp4_480
+    if (downloadUrl) {
+      // Open direct https URL in new tab
+      window.open(downloadUrl.replace(/^http:\/\//, "https://"), "_blank")
     }
   }
 
@@ -156,28 +202,57 @@ function VideoPlayer({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="relative aspect-video w-full overflow-hidden rounded-lg bg-black">
-          <video
-            ref={videoRef}
-            controls
-            autoPlay
-            playsInline
-            className="size-full object-contain"
-            crossOrigin="anonymous"
-          >
-            {movie.webm?.max && (
-              <source src={movie.webm.max} type="video/webm" />
-            )}
-            {movie.webm?.["480"] && (
-              <source src={movie.webm["480"]} type="video/webm" />
-            )}
-            {movie.mp4?.max && (
-              <source src={movie.mp4.max} type="video/mp4" />
-            )}
-            {movie.mp4?.["480"] && (
-              <source src={movie.mp4["480"]} type="video/mp4" />
-            )}
-            <track kind="captions" />
-          </video>
+          {!videoError ? (
+            <video
+              ref={videoRef}
+              controls
+              autoPlay
+              playsInline
+              className="size-full object-contain"
+              onError={() => setVideoError(true)}
+            >
+              {/* Try proxied version first (avoids mixed content) */}
+              {proxiedSrc && (
+                <source
+                  src={proxiedSrc}
+                  type={primarySrc.includes(".webm") ? "video/webm" : "video/mp4"}
+                />
+              )}
+              {/* Fallback to direct https */}
+              {directSrc && (
+                <source
+                  src={directSrc}
+                  type={primarySrc.includes(".webm") ? "video/webm" : "video/mp4"}
+                />
+              )}
+              <track kind="captions" />
+            </video>
+          ) : (
+            /* If video fails to load at all, show a fallback with direct link */
+            <div className="flex size-full flex-col items-center justify-center gap-4 text-white">
+              <Play className="size-12 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">
+                {lang === "tr"
+                  ? "Video yuklenemedi. Dogrudan acmayı deneyin:"
+                  : "Video could not load. Try opening directly:"}
+              </p>
+              <Button
+                variant="secondary"
+                size="sm"
+                asChild
+                className="gap-1.5"
+              >
+                <a
+                  href={directSrc}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <Play className="size-3.5" />
+                  {lang === "tr" ? "Yeni Sekmede Ac" : "Open in New Tab"}
+                </a>
+              </Button>
+            </div>
+          )}
         </div>
         <div className="mt-3 flex items-center justify-between">
           <p className="text-sm font-medium text-white truncate pr-4">
@@ -220,7 +295,9 @@ export function MediaGallery({
 }: MediaGalleryProps) {
   const [emblaRef, emblaApi] = useEmblaCarousel({ loop: true, align: "start" })
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null)
-  const [activeMovie, setActiveMovie] = useState<SteamGame["movies"][0] | null>(null)
+  const [activeMovie, setActiveMovie] = useState<SteamGame["movies"][0] | null>(
+    null
+  )
 
   const scrollPrev = useCallback(() => emblaApi?.scrollPrev(), [emblaApi])
   const scrollNext = useCallback(() => emblaApi?.scrollNext(), [emblaApi])
@@ -252,7 +329,6 @@ export function MediaGallery({
                     src={movie.thumbnail}
                     alt={movie.name}
                     className="size-full object-cover transition-transform group-hover:scale-105"
-                    crossOrigin="anonymous"
                   />
                   <div className="absolute inset-0 flex items-center justify-center bg-black/40 transition-colors group-hover:bg-black/20">
                     <div className="flex size-12 items-center justify-center rounded-full bg-primary/90 shadow-lg transition-transform group-hover:scale-110">
@@ -293,7 +369,6 @@ export function MediaGallery({
                         alt={`Screenshot ${ss.id}`}
                         className="size-full object-cover transition-transform group-hover:scale-105"
                         loading="lazy"
-                        crossOrigin="anonymous"
                       />
                       <div className="absolute inset-0 bg-black/0 transition-colors group-hover:bg-black/20" />
                       <div className="absolute bottom-2 right-2 opacity-0 transition-opacity group-hover:opacity-100">
