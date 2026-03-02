@@ -178,7 +178,7 @@ export function GameCard({ data, lang }: GameCardProps) {
                 <ScoreBadge
                   score={game.metacritic.score}
                   type="metacritic"
-                  label={t(lang, "metacritic")}
+                  label={game.metacritic.source === "opencritic" ? "OpenCritic" : t(lang, "metacritic")}
                 />
               )}
               {reviews.review_score > 0 && (

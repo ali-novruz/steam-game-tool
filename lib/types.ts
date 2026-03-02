@@ -20,7 +20,7 @@ export interface SteamGame {
     highlight: boolean
   }[]
   release_date: { coming_soon: boolean; date: string }
-  metacritic?: { score: number; url: string }
+  metacritic?: { score: number; url: string; source?: string }
   recommendations?: { total: number }
   price_overview?: {
     currency: string

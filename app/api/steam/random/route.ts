@@ -52,6 +52,44 @@ export async function GET() {
         // Reviews fetch failed, use defaults
       }
 
+      // Try to get OpenCritic score if metacritic is missing
+      let metacritic = gameData.metacritic || null
+      if (!metacritic) {
+        try {
+          const searchRes = await fetch(
+            `https://api.opencritic.com/api/game/search?criteria=${encodeURIComponent(gameData.name)}`,
+            {
+              headers: { "User-Agent": "Mozilla/5.0" },
+              signal: AbortSignal.timeout(3000),
+            }
+          )
+          if (searchRes.ok) {
+            const results = await searchRes.json()
+            if (results?.[0]?.id) {
+              const gameRes = await fetch(
+                `https://api.opencritic.com/api/game/${results[0].id}`,
+                {
+                  headers: { "User-Agent": "Mozilla/5.0" },
+                  signal: AbortSignal.timeout(3000),
+                }
+              )
+              if (gameRes.ok) {
+                const ocData = await gameRes.json()
+                if (ocData?.topCriticScore && ocData.topCriticScore > 0) {
+                  metacritic = {
+                    score: Math.round(ocData.topCriticScore),
+                    url: `https://opencritic.com/game/${ocData.id}/${ocData.name?.toLowerCase().replace(/[^a-z0-9]+/g, "-") || ""}`,
+                    source: "opencritic",
+                  }
+                }
+              }
+            }
+          }
+        } catch {
+          // OpenCritic lookup failed, continue without it
+        }
+      }
+
       return NextResponse.json({
         game: {
           steam_appid: gameData.steam_appid,
@@ -71,7 +109,7 @@ export async function GET() {
             coming_soon: false,
             date: "Unknown",
           },
-          metacritic: gameData.metacritic || null,
+          metacritic,
           recommendations: gameData.recommendations || null,
           price_overview: gameData.price_overview || null,
           is_free: gameData.is_free || false,

@@ -51,12 +51,15 @@ function useScrollLock(active: boolean) {
 }
 
 /* ------------------------------------------------------------------ */
-/*  Helpers - proxy Steam URLs                                         */
+/*  Helpers                                                            */
 /* ------------------------------------------------------------------ */
-function proxyUrl(raw: string, type: "image" | "video") {
+function toHttps(url: string) {
+  return url ? url.replace(/^http:\/\//, "https://") : ""
+}
+
+function proxyUrl(raw: string) {
   if (!raw) return ""
-  const endpoint = type === "image" ? "/api/proxy-image" : "/api/proxy-video"
-  return `${endpoint}?url=${encodeURIComponent(raw)}`
+  return `/api/proxy-image?url=${encodeURIComponent(raw)}`
 }
 
 /* ------------------------------------------------------------------ */
@@ -85,7 +88,7 @@ function Lightbox({
 
   const handleDownload = async () => {
     try {
-      const res = await fetch(proxyUrl(src, "image"))
+      const res = await fetch(proxyUrl(src))
       const blob = await res.blob()
       const url = URL.createObjectURL(blob)
       const a = document.createElement("a")
@@ -157,6 +160,7 @@ function VideoPlayer({
 }) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const [videoError, setVideoError] = useState(false)
+  const [downloadingVideo, setDownloadingVideo] = useState(false)
 
   useScrollLock(true)
 
@@ -168,24 +172,31 @@ function VideoPlayer({
     return () => document.removeEventListener("keydown", handler)
   }, [onClose])
 
-  // Build proxied source URLs
-  const mp4Max = movie.mp4?.max || ""
-  const mp4_480 = movie.mp4?.["480"] || ""
-  const webmMax = movie.webm?.max || ""
-  const webm480 = movie.webm?.["480"] || ""
+  // Convert all URLs to HTTPS directly - Steam CDN supports HTTPS
+  const mp4Max = toHttps(movie.mp4?.max || "")
+  const mp4_480 = toHttps(movie.mp4?.["480"] || "")
+  const webmMax = toHttps(movie.webm?.max || "")
+  const webm480 = toHttps(movie.webm?.["480"] || "")
 
-  // Prefer mp4 through proxy (more compatible)
-  const primarySrc = mp4Max || mp4_480 || webmMax || webm480
-  const proxiedSrc = primarySrc ? proxyUrl(primarySrc, "video") : ""
-
-  // Fallback: try direct https version
-  const directSrc = primarySrc ? primarySrc.replace(/^http:\/\//, "https://") : ""
-
-  const handleDownloadVideo = () => {
-    const downloadUrl = mp4Max || mp4_480
-    if (downloadUrl) {
-      // Open direct https URL in new tab
-      window.open(downloadUrl.replace(/^http:\/\//, "https://"), "_blank")
+  const handleDownloadVideo = async () => {
+    const url = mp4Max || mp4_480
+    if (!url) return
+    setDownloadingVideo(true)
+    try {
+      const res = await fetch(url)
+      const blob = await res.blob()
+      const blobUrl = URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = blobUrl
+      a.download = `${movie.name.replace(/[^a-zA-Z0-9]/g, "_")}.mp4`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(blobUrl)
+    } catch {
+      window.open(url, "_blank")
+    } finally {
+      setDownloadingVideo(false)
     }
   }
 
@@ -211,42 +222,24 @@ function VideoPlayer({
               className="size-full object-contain"
               onError={() => setVideoError(true)}
             >
-              {/* Try proxied version first (avoids mixed content) */}
-              {proxiedSrc && (
-                <source
-                  src={proxiedSrc}
-                  type={primarySrc.includes(".webm") ? "video/webm" : "video/mp4"}
-                />
-              )}
-              {/* Fallback to direct https */}
-              {directSrc && (
-                <source
-                  src={directSrc}
-                  type={primarySrc.includes(".webm") ? "video/webm" : "video/mp4"}
-                />
-              )}
+              {/* MP4 sources - most compatible */}
+              {mp4Max && <source src={mp4Max} type="video/mp4" />}
+              {mp4_480 && <source src={mp4_480} type="video/mp4" />}
+              {/* WebM fallback */}
+              {webmMax && <source src={webmMax} type="video/webm" />}
+              {webm480 && <source src={webm480} type="video/webm" />}
               <track kind="captions" />
             </video>
           ) : (
-            /* If video fails to load at all, show a fallback with direct link */
             <div className="flex size-full flex-col items-center justify-center gap-4 text-white">
               <Play className="size-12 text-muted-foreground" />
               <p className="text-sm text-muted-foreground">
                 {lang === "tr"
-                  ? "Video yuklenemedi. Dogrudan acmayı deneyin:"
+                  ? "Video yuklenemedi. Dogrudan acmayi deneyin:"
                   : "Video could not load. Try opening directly:"}
               </p>
-              <Button
-                variant="secondary"
-                size="sm"
-                asChild
-                className="gap-1.5"
-              >
-                <a
-                  href={directSrc}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
+              <Button variant="secondary" size="sm" asChild className="gap-1.5">
+                <a href={mp4Max || mp4_480 || webmMax} target="_blank" rel="noopener noreferrer">
                   <Play className="size-3.5" />
                   {lang === "tr" ? "Yeni Sekmede Ac" : "Open in New Tab"}
                 </a>
@@ -263,10 +256,13 @@ function VideoPlayer({
               variant="secondary"
               size="sm"
               onClick={handleDownloadVideo}
+              disabled={downloadingVideo}
               className="gap-1.5 bg-white/10 text-white hover:bg-white/20 border-0"
             >
               <Download className="size-3.5" />
-              {lang === "tr" ? "Video Indir" : "Download Video"}
+              {downloadingVideo
+                ? lang === "tr" ? "Indiriliyor..." : "Downloading..."
+                : lang === "tr" ? "Video Indir" : "Download Video"}
             </Button>
             <Button
               variant="secondary"
