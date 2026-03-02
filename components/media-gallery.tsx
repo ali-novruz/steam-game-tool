@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback, useEffect, useRef } from "react"
+import { useState, useCallback, useEffect } from "react"
 import useEmblaCarousel from "embla-carousel-react"
 import {
   ChevronLeft,
@@ -28,43 +28,23 @@ function useScrollLock(active: boolean) {
   useEffect(() => {
     if (!active) return
     const scrollY = window.scrollY
-    const html = document.documentElement
-    const body = document.body
-
-    html.style.overflow = "hidden"
-    body.style.overflow = "hidden"
-    body.style.position = "fixed"
-    body.style.top = `-${scrollY}px`
-    body.style.left = "0"
-    body.style.right = "0"
+    document.body.style.overflow = "hidden"
+    document.body.style.position = "fixed"
+    document.body.style.top = `-${scrollY}px`
+    document.body.style.left = "0"
+    document.body.style.right = "0"
+    document.body.style.width = "100%"
 
     return () => {
-      html.style.overflow = ""
-      body.style.overflow = ""
-      body.style.position = ""
-      body.style.top = ""
-      body.style.left = ""
-      body.style.right = ""
+      document.body.style.overflow = ""
+      document.body.style.position = ""
+      document.body.style.top = ""
+      document.body.style.left = ""
+      document.body.style.right = ""
+      document.body.style.width = ""
       window.scrollTo(0, scrollY)
     }
   }, [active])
-}
-
-/* ------------------------------------------------------------------ */
-/*  Helpers                                                            */
-/* ------------------------------------------------------------------ */
-function toHttps(url: string) {
-  return url ? url.replace(/^http:\/\//, "https://") : ""
-}
-
-function proxyImageUrl(raw: string) {
-  if (!raw) return ""
-  return `/api/proxy-image?url=${encodeURIComponent(raw)}`
-}
-
-function proxyVideoUrl(raw: string) {
-  if (!raw) return ""
-  return `/api/proxy-video?url=${encodeURIComponent(raw)}`
 }
 
 /* ------------------------------------------------------------------ */
@@ -93,7 +73,8 @@ function Lightbox({
 
   const handleDownload = async () => {
     try {
-      const res = await fetch(proxyImageUrl(src))
+      const proxyUrl = `/api/proxy-image?url=${encodeURIComponent(src)}`
+      const res = await fetch(proxyUrl)
       const blob = await res.blob()
       const url = URL.createObjectURL(blob)
       const a = document.createElement("a")
@@ -152,21 +133,15 @@ function Lightbox({
 }
 
 /* ------------------------------------------------------------------ */
-/*  Video Player overlay                                              */
+/*  Video Player overlay - uses Steam embed iframe                    */
 /* ------------------------------------------------------------------ */
 function VideoPlayer({
   movie,
   onClose,
-  lang,
 }: {
   movie: SteamGame["movies"][0]
   onClose: () => void
-  lang: "tr" | "en"
 }) {
-  const videoRef = useRef<HTMLVideoElement>(null)
-  const [videoError, setVideoError] = useState(false)
-  const [downloadingVideo, setDownloadingVideo] = useState(false)
-
   useScrollLock(true)
 
   useEffect(() => {
@@ -177,43 +152,15 @@ function VideoPlayer({
     return () => document.removeEventListener("keydown", handler)
   }, [onClose])
 
-  // Raw URLs from Steam API (may be http://)
-  const rawMp4Max = movie.mp4?.max || ""
-  const rawMp4_480 = movie.mp4?.["480"] || ""
-  const rawWebmMax = movie.webm?.max || ""
-  const rawWebm480 = movie.webm?.["480"] || ""
-
-  // Use proxy to avoid mixed-content / CORS issues
-  const mp4MaxProxy = proxyVideoUrl(rawMp4Max)
-  const mp4_480Proxy = proxyVideoUrl(rawMp4_480)
-  const webmMaxProxy = proxyVideoUrl(rawWebmMax)
-  const webm480Proxy = proxyVideoUrl(rawWebm480)
-
-  // Direct HTTPS fallback
-  const directUrl = toHttps(rawMp4Max || rawMp4_480 || rawWebmMax || rawWebm480)
-
-  const handleDownloadVideo = async () => {
-    const raw = rawMp4Max || rawMp4_480
-    if (!raw) return
-    setDownloadingVideo(true)
-    try {
-      const res = await fetch(proxyVideoUrl(raw))
-      const blob = await res.blob()
-      const blobUrl = URL.createObjectURL(blob)
-      const a = document.createElement("a")
-      a.href = blobUrl
-      a.download = `${movie.name.replace(/[^a-zA-Z0-9]/g, "_")}.mp4`
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
-      URL.revokeObjectURL(blobUrl)
-    } catch {
-      // Fallback: open direct https in new tab
-      window.open(directUrl, "_blank")
-    } finally {
-      setDownloadingVideo(false)
-    }
-  }
+  // Use direct HTTPS URLs for video
+  const mp4Url = (movie.mp4?.max || movie.mp4?.["480"] || "").replace(
+    /^http:\/\//,
+    "https://"
+  )
+  const webmUrl = (movie.webm?.max || movie.webm?.["480"] || "").replace(
+    /^http:\/\//,
+    "https://"
+  )
 
   return (
     <div
@@ -228,67 +175,30 @@ function VideoPlayer({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="relative aspect-video w-full overflow-hidden rounded-lg bg-black">
-          {!videoError ? (
-            <video
-              ref={videoRef}
-              controls
-              autoPlay
-              playsInline
-              className="size-full object-contain"
-              onError={() => setVideoError(true)}
-            >
-              {/* MP4 via proxy - most compatible */}
-              {mp4MaxProxy && <source src={mp4MaxProxy} type="video/mp4" />}
-              {mp4_480Proxy && <source src={mp4_480Proxy} type="video/mp4" />}
-              {/* WebM via proxy fallback */}
-              {webmMaxProxy && <source src={webmMaxProxy} type="video/webm" />}
-              {webm480Proxy && <source src={webm480Proxy} type="video/webm" />}
-              <track kind="captions" />
-            </video>
-          ) : (
-            <div className="flex size-full flex-col items-center justify-center gap-4 text-white">
-              <Play className="size-12 text-muted-foreground" />
-              <p className="text-sm text-muted-foreground">
-                {lang === "tr"
-                  ? "Video yuklenemedi. Dogrudan acmayi deneyin:"
-                  : "Video could not load. Try opening directly:"}
-              </p>
-              <Button variant="secondary" size="sm" asChild className="gap-1.5">
-                <a href={directUrl} target="_blank" rel="noopener noreferrer">
-                  <Play className="size-3.5" />
-                  {lang === "tr" ? "Yeni Sekmede Ac" : "Open in New Tab"}
-                </a>
-              </Button>
-            </div>
-          )}
+          <video
+            controls
+            autoPlay
+            playsInline
+            className="size-full object-contain"
+          >
+            {mp4Url && <source src={mp4Url} type="video/mp4" />}
+            {webmUrl && <source src={webmUrl} type="video/webm" />}
+            <track kind="captions" />
+          </video>
         </div>
         <div className="mt-3 flex items-center justify-between">
           <p className="text-sm font-medium text-white truncate pr-4">
             {movie.name}
           </p>
-          <div className="flex gap-2 shrink-0">
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={handleDownloadVideo}
-              disabled={downloadingVideo}
-              className="gap-1.5 bg-white/10 text-white hover:bg-white/20 border-0"
-            >
-              <Download className="size-3.5" />
-              {downloadingVideo
-                ? lang === "tr" ? "Indiriliyor..." : "Downloading..."
-                : lang === "tr" ? "Video Indir" : "Download Video"}
-            </Button>
-            <Button
-              variant="secondary"
-              size="icon-sm"
-              onClick={onClose}
-              aria-label="Close"
-              className="rounded-full bg-white/10 text-white hover:bg-white/20 border-0"
-            >
-              <X className="size-4" />
-            </Button>
-          </div>
+          <Button
+            variant="secondary"
+            size="icon-sm"
+            onClick={onClose}
+            aria-label="Close"
+            className="rounded-full bg-white/10 text-white hover:bg-white/20 border-0"
+          >
+            <X className="size-4" />
+          </Button>
         </div>
       </div>
     </div>
@@ -331,7 +241,12 @@ export function MediaGallery({
               {game.movies.map((movie) => (
                 <button
                   key={movie.id}
-                  onClick={() => setActiveMovie(movie)}
+                  onClick={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    setActiveMovie(movie)
+                  }}
+                  type="button"
                   className="group relative aspect-video w-48 shrink-0 overflow-hidden rounded-lg bg-secondary cursor-pointer"
                   aria-label={`${lang === "tr" ? "Oynat" : "Play"}: ${movie.name}`}
                 >
@@ -370,7 +285,12 @@ export function MediaGallery({
                   {game.screenshots.map((ss) => (
                     <button
                       key={ss.id}
-                      onClick={() => setLightboxSrc(ss.path_full)}
+                      onClick={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        setLightboxSrc(ss.path_full)
+                      }}
+                      type="button"
                       className="group relative aspect-video w-full shrink-0 overflow-hidden rounded-lg bg-secondary cursor-pointer md:w-[calc(50%-0.375rem)]"
                       aria-label={`${lang === "tr" ? "Buyut" : "Enlarge"}: Screenshot ${ss.id}`}
                     >
@@ -437,7 +357,6 @@ export function MediaGallery({
         <VideoPlayer
           movie={activeMovie}
           onClose={() => setActiveMovie(null)}
-          lang={lang}
         />
       )}
     </>
