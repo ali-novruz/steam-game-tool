@@ -1,37 +1,334 @@
 "use client"
-// v2 - social-share + video proxy
-import { useState, useCallback, useEffect } from "react"
+
+import { useState, useCallback, useEffect, useRef } from "react"
 import { useTheme } from "next-themes"
-import { Moon, Sun, AlertCircle } from "lucide-react"
+import { Sun, Moon, Copy, Check, Download, Twitter, Instagram, Image as ImageIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { GenerateButton } from "@/components/generate-button"
-import { LanguageSwitcher } from "@/components/language-switcher"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { GameCard } from "@/components/game-card"
 import { GameSkeleton } from "@/components/game-skeleton"
-import { SocialShare } from "@/components/social-share"
+import { GenerateButton } from "@/components/generate-button"
+import { LanguageSwitcher } from "@/components/language-switcher"
 import type { GameData, Language } from "@/lib/types"
 import { t } from "@/lib/i18n"
+import { toPng } from "html-to-image"
 
+/* ------------------------------------------------------------------ */
+/*  Inline Social Share Cards                                          */
+/* ------------------------------------------------------------------ */
+function SocialShareSection({ data, lang }: { data: GameData; lang: Language }) {
+  const { game, reviews } = data
+  const twitterRef = useRef<HTMLDivElement>(null)
+  const instaRef = useRef<HTMLDivElement>(null)
+  const generalRef = useRef<HTMLDivElement>(null)
+  const [downloading, setDownloading] = useState<string | null>(null)
+  const [copied, setCopied] = useState(false)
+
+  const plainDesc =
+    game.short_description?.replace(/<[^>]*>/g, "").slice(0, 120) || ""
+  const genresStr =
+    game.genres?.slice(0, 3).map((g) => g.description).join(" / ") || ""
+  const priceText = game.is_free
+    ? lang === "tr" ? "Ucretsiz" : "Free"
+    : game.price_overview?.final_formatted || (lang === "tr" ? "Fiyat bilgisi yok" : "N/A")
+  const positivePercent =
+    reviews.total_positive + reviews.total_negative > 0
+      ? Math.round(
+          (reviews.total_positive /
+            (reviews.total_positive + reviews.total_negative)) *
+            100
+        )
+      : 0
+
+  const storeLink = `https://store.steampowered.com/app/${game.steam_appid}`
+
+  const socialText = [
+    game.name,
+    "",
+    plainDesc,
+    "",
+    genresStr ? `Genres: ${genresStr}` : "",
+    reviews.review_score_desc
+      ? `Reviews: ${reviews.review_score_desc} (${positivePercent}% positive)`
+      : "",
+    game.metacritic ? `${game.metacritic.source === "opencritic" ? "OpenCritic" : "Metacritic"}: ${game.metacritic.score}/100` : "",
+    `Price: ${priceText}`,
+    "",
+    storeLink,
+    "",
+    "#Steam #Gaming #SteamGameRoulette",
+  ]
+    .filter(Boolean)
+    .join("\n")
+
+  const handleCopyText = async () => {
+    await navigator.clipboard.writeText(socialText)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
+  const handleDownload = async (
+    ref: React.RefObject<HTMLDivElement | null>,
+    name: string
+  ) => {
+    if (!ref.current) return
+    setDownloading(name)
+    try {
+      const dataUrl = await toPng(ref.current, {
+        cacheBust: true,
+        pixelRatio: 2,
+      })
+      const a = document.createElement("a")
+      a.href = dataUrl
+      a.download = `${game.name.replace(/[^a-zA-Z0-9]/g, "_")}_${name}.png`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+    } catch {
+      // silent
+    } finally {
+      setDownloading(null)
+    }
+  }
+
+  const cardBaseStyle: React.CSSProperties = {
+    background: "linear-gradient(145deg, #1b2838 0%, #0e1621 100%)",
+    color: "#c7d5e0",
+    fontFamily: "system-ui, -apple-system, sans-serif",
+    overflow: "hidden",
+  }
+
+  return (
+    <div className="flex flex-col gap-4">
+      <h3 className="text-sm font-semibold text-foreground">
+        {t(lang, "socialShare")}
+      </h3>
+
+      {/* Copyable Social Text */}
+      <div className="flex flex-col gap-2">
+        <pre className="max-h-36 overflow-y-auto whitespace-pre-wrap break-words rounded-lg bg-secondary p-3 text-xs text-secondary-foreground font-mono leading-relaxed">
+          {socialText}
+        </pre>
+        <Button variant="outline" size="sm" onClick={handleCopyText} className="w-fit gap-1.5">
+          {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
+          {copied
+            ? lang === "tr" ? "Kopyalandi!" : "Copied!"
+            : lang === "tr" ? "Metni Kopyala" : "Copy Text"}
+        </Button>
+      </div>
+
+      <Tabs defaultValue="twitter" className="w-full">
+        <TabsList className="w-full">
+          <TabsTrigger value="twitter" className="gap-1.5 flex-1">
+            <Twitter className="size-3.5" />
+            {t(lang, "shareTwitter")}
+          </TabsTrigger>
+          <TabsTrigger value="instagram" className="gap-1.5 flex-1">
+            <Instagram className="size-3.5" />
+            {t(lang, "shareInstagram")}
+          </TabsTrigger>
+          <TabsTrigger value="general" className="gap-1.5 flex-1">
+            <ImageIcon className="size-3.5" />
+            {t(lang, "shareGeneral")}
+          </TabsTrigger>
+        </TabsList>
+
+        {/* Twitter Card 1200x675 (16:9) */}
+        <TabsContent value="twitter" className="flex flex-col gap-3 mt-3">
+          <div className="overflow-hidden rounded-lg border border-border">
+            <div
+              ref={twitterRef}
+              style={{ ...cardBaseStyle, width: "100%", aspectRatio: "1200/675", position: "relative" }}
+            >
+              {/* BG image */}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={game.header_image}
+                alt=""
+                crossOrigin="anonymous"
+                style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", opacity: 0.25, filter: "blur(8px)" }}
+              />
+              <div style={{ position: "relative", display: "flex", height: "100%", padding: "5%" }}>
+                {/* Left: Cover */}
+                <div style={{ width: "45%", height: "100%", borderRadius: 12, overflow: "hidden", flexShrink: 0 }}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={game.header_image}
+                    alt={game.name}
+                    crossOrigin="anonymous"
+                    style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                  />
+                </div>
+                {/* Right: Info */}
+                <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", paddingLeft: "5%", gap: "4%" }}>
+                  <div style={{ fontSize: "clamp(14px, 2vw, 24px)", fontWeight: 700, color: "#fff", lineHeight: 1.2 }}>{game.name}</div>
+                  <div style={{ fontSize: "clamp(9px, 1.2vw, 13px)", color: "#8f98a0", lineHeight: 1.4 }}>{plainDesc}</div>
+                  <div style={{ display: "flex", gap: "6%", flexWrap: "wrap" }}>
+                    {game.metacritic && (
+                      <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                        <div style={{ background: game.metacritic.score >= 75 ? "#66c0f4" : game.metacritic.score >= 50 ? "#b9a44c" : "#c35b2d", color: "#fff", fontWeight: 700, fontSize: "clamp(14px, 2vw, 22px)", borderRadius: 6, width: "clamp(32px, 4vw, 48px)", height: "clamp(32px, 4vw, 48px)", display: "flex", alignItems: "center", justifyContent: "center" }}>{game.metacritic.score}</div>
+                        <div style={{ fontSize: "clamp(7px, 0.9vw, 10px)", color: "#8f98a0", marginTop: 4 }}>{game.metacritic.source === "opencritic" ? "OpenCritic" : "Metacritic"}</div>
+                      </div>
+                    )}
+                    {positivePercent > 0 && (
+                      <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                        <div style={{ background: positivePercent >= 70 ? "#66c0f4" : positivePercent >= 40 ? "#b9a44c" : "#c35b2d", color: "#fff", fontWeight: 700, fontSize: "clamp(14px, 2vw, 22px)", borderRadius: 6, width: "clamp(32px, 4vw, 48px)", height: "clamp(32px, 4vw, 48px)", display: "flex", alignItems: "center", justifyContent: "center" }}>{positivePercent}%</div>
+                        <div style={{ fontSize: "clamp(7px, 0.9vw, 10px)", color: "#8f98a0", marginTop: 4 }}>Steam</div>
+                      </div>
+                    )}
+                  </div>
+                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                    {game.genres?.slice(0, 3).map((g) => (
+                      <span key={g.id} style={{ background: "rgba(102,192,244,0.15)", color: "#66c0f4", fontSize: "clamp(7px, 0.9vw, 11px)", padding: "2px 8px", borderRadius: 4 }}>{g.description}</span>
+                    ))}
+                  </div>
+                  <div style={{ fontSize: "clamp(12px, 1.6vw, 20px)", fontWeight: 700, color: "#66c0f4" }}>{priceText}</div>
+                </div>
+              </div>
+              <div style={{ position: "absolute", bottom: "3%", right: "4%", fontSize: "clamp(7px, 0.8vw, 10px)", color: "#4a5568" }}>steamgameroulette.app</div>
+            </div>
+          </div>
+          <Button variant="outline" size="sm" onClick={() => handleDownload(twitterRef, "twitter")} disabled={downloading === "twitter"} className="w-fit gap-1.5">
+            <Download className="size-3.5" />
+            {downloading === "twitter" ? "..." : `${t(lang, "download")} Twitter/X`}
+          </Button>
+        </TabsContent>
+
+        {/* Instagram Story 1080x1920 (9:16) */}
+        <TabsContent value="instagram" className="flex flex-col gap-3 mt-3">
+          <div className="overflow-hidden rounded-lg border border-border" style={{ maxHeight: 500, overflowY: "auto" }}>
+            <div
+              ref={instaRef}
+              style={{ ...cardBaseStyle, width: "100%", aspectRatio: "1080/1920", position: "relative" }}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={game.header_image}
+                alt=""
+                crossOrigin="anonymous"
+                style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", opacity: 0.2, filter: "blur(12px)" }}
+              />
+              <div style={{ position: "relative", display: "flex", flexDirection: "column", height: "100%", padding: "8% 6%" }}>
+                {/* Cover */}
+                <div style={{ width: "100%", aspectRatio: "460/215", borderRadius: 16, overflow: "hidden" }}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={game.header_image} alt={game.name} crossOrigin="anonymous" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                </div>
+                <div style={{ marginTop: "6%", display: "flex", flexDirection: "column", gap: "3%" }}>
+                  <div style={{ fontSize: "clamp(16px, 4vw, 32px)", fontWeight: 700, color: "#fff", lineHeight: 1.2 }}>{game.name}</div>
+                  <div style={{ fontSize: "clamp(10px, 2.5vw, 16px)", color: "#8f98a0", lineHeight: 1.5 }}>{plainDesc}</div>
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: "2%" }}>
+                    {game.genres?.slice(0, 4).map((g) => (
+                      <span key={g.id} style={{ background: "rgba(102,192,244,0.15)", color: "#66c0f4", fontSize: "clamp(9px, 2vw, 14px)", padding: "4px 12px", borderRadius: 6 }}>{g.description}</span>
+                    ))}
+                  </div>
+                  <div style={{ display: "flex", gap: "8%", marginTop: "4%", justifyContent: "center" }}>
+                    {game.metacritic && (
+                      <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                        <div style={{ background: game.metacritic.score >= 75 ? "#66c0f4" : game.metacritic.score >= 50 ? "#b9a44c" : "#c35b2d", color: "#fff", fontWeight: 700, fontSize: "clamp(20px, 5vw, 36px)", borderRadius: 10, width: "clamp(48px, 10vw, 72px)", height: "clamp(48px, 10vw, 72px)", display: "flex", alignItems: "center", justifyContent: "center" }}>{game.metacritic.score}</div>
+                        <div style={{ fontSize: "clamp(8px, 2vw, 12px)", color: "#8f98a0", marginTop: 6 }}>{game.metacritic.source === "opencritic" ? "OpenCritic" : "Metacritic"}</div>
+                      </div>
+                    )}
+                    {positivePercent > 0 && (
+                      <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                        <div style={{ background: positivePercent >= 70 ? "#66c0f4" : positivePercent >= 40 ? "#b9a44c" : "#c35b2d", color: "#fff", fontWeight: 700, fontSize: "clamp(20px, 5vw, 36px)", borderRadius: 10, width: "clamp(48px, 10vw, 72px)", height: "clamp(48px, 10vw, 72px)", display: "flex", alignItems: "center", justifyContent: "center" }}>{positivePercent}%</div>
+                        <div style={{ fontSize: "clamp(8px, 2vw, 12px)", color: "#8f98a0", marginTop: 6 }}>Steam</div>
+                      </div>
+                    )}
+                  </div>
+                  <div style={{ fontSize: "clamp(18px, 5vw, 36px)", fontWeight: 700, color: "#66c0f4", textAlign: "center", marginTop: "4%" }}>{priceText}</div>
+                </div>
+                <div style={{ marginTop: "auto", textAlign: "center", fontSize: "clamp(8px, 2vw, 12px)", color: "#4a5568" }}>steamgameroulette.app</div>
+              </div>
+            </div>
+          </div>
+          <Button variant="outline" size="sm" onClick={() => handleDownload(instaRef, "instagram")} disabled={downloading === "instagram"} className="w-fit gap-1.5">
+            <Download className="size-3.5" />
+            {downloading === "instagram" ? "..." : `${t(lang, "download")} Instagram`}
+          </Button>
+        </TabsContent>
+
+        {/* General Card 1200x900 (4:3) */}
+        <TabsContent value="general" className="flex flex-col gap-3 mt-3">
+          <div className="overflow-hidden rounded-lg border border-border">
+            <div
+              ref={generalRef}
+              style={{ ...cardBaseStyle, width: "100%", aspectRatio: "1200/900", position: "relative" }}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={game.header_image}
+                alt=""
+                crossOrigin="anonymous"
+                style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", opacity: 0.2, filter: "blur(10px)" }}
+              />
+              <div style={{ position: "relative", display: "flex", flexDirection: "column", height: "100%", padding: "5%" }}>
+                <div style={{ display: "flex", gap: "4%", flex: 1 }}>
+                  <div style={{ width: "50%", borderRadius: 12, overflow: "hidden" }}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={game.header_image} alt={game.name} crossOrigin="anonymous" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  </div>
+                  <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", gap: "4%" }}>
+                    <div style={{ fontSize: "clamp(14px, 2.5vw, 28px)", fontWeight: 700, color: "#fff", lineHeight: 1.2 }}>{game.name}</div>
+                    <div style={{ fontSize: "clamp(9px, 1.3vw, 14px)", color: "#8f98a0", lineHeight: 1.5 }}>{plainDesc}</div>
+                    <div style={{ display: "flex", gap: "6%", marginTop: "2%" }}>
+                      {game.metacritic && (
+                        <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                          <div style={{ background: game.metacritic.score >= 75 ? "#66c0f4" : game.metacritic.score >= 50 ? "#b9a44c" : "#c35b2d", color: "#fff", fontWeight: 700, fontSize: "clamp(14px, 2vw, 24px)", borderRadius: 8, width: "clamp(36px, 5vw, 56px)", height: "clamp(36px, 5vw, 56px)", display: "flex", alignItems: "center", justifyContent: "center" }}>{game.metacritic.score}</div>
+                          <div style={{ fontSize: "clamp(7px, 0.8vw, 10px)", color: "#8f98a0", marginTop: 4 }}>{game.metacritic.source === "opencritic" ? "OpenCritic" : "Metacritic"}</div>
+                        </div>
+                      )}
+                      {positivePercent > 0 && (
+                        <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                          <div style={{ background: positivePercent >= 70 ? "#66c0f4" : positivePercent >= 40 ? "#b9a44c" : "#c35b2d", color: "#fff", fontWeight: 700, fontSize: "clamp(14px, 2vw, 24px)", borderRadius: 8, width: "clamp(36px, 5vw, 56px)", height: "clamp(36px, 5vw, 56px)", display: "flex", alignItems: "center", justifyContent: "center" }}>{positivePercent}%</div>
+                          <div style={{ fontSize: "clamp(7px, 0.8vw, 10px)", color: "#8f98a0", marginTop: 4 }}>Steam</div>
+                        </div>
+                      )}
+                    </div>
+                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                      {game.genres?.slice(0, 4).map((g) => (
+                        <span key={g.id} style={{ background: "rgba(102,192,244,0.15)", color: "#66c0f4", fontSize: "clamp(7px, 1vw, 12px)", padding: "3px 10px", borderRadius: 5 }}>{g.description}</span>
+                      ))}
+                    </div>
+                    <div style={{ fontSize: "clamp(14px, 2vw, 24px)", fontWeight: 700, color: "#66c0f4" }}>{priceText}</div>
+                  </div>
+                </div>
+                <div style={{ position: "absolute", bottom: "3%", right: "4%", fontSize: "clamp(7px, 0.8vw, 10px)", color: "#4a5568" }}>steamgameroulette.app</div>
+              </div>
+            </div>
+          </div>
+          <Button variant="outline" size="sm" onClick={() => handleDownload(generalRef, "general")} disabled={downloading === "general"} className="w-fit gap-1.5">
+            <Download className="size-3.5" />
+            {downloading === "general" ? "..." : `${t(lang, "download")} ${t(lang, "shareGeneral")}`}
+          </Button>
+        </TabsContent>
+      </Tabs>
+    </div>
+  )
+}
+
+/* ------------------------------------------------------------------ */
+/*  Main Page                                                          */
+/* ------------------------------------------------------------------ */
 export default function Home() {
-  const [lang, setLang] = useState<Language>("tr")
   const [gameData, setGameData] = useState<GameData | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(false)
-  const [mounted, setMounted] = useState(false)
+  const [lang, setLang] = useState<Language>("tr")
   const { setTheme, resolvedTheme } = useTheme()
+  const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
     setMounted(true)
   }, [])
 
-  const fetchRandomGame = useCallback(async () => {
+  const fetchGame = useCallback(async () => {
     setLoading(true)
     setError(false)
     try {
       const res = await fetch("/api/steam/random")
-      if (!res.ok) throw new Error("Failed to fetch")
+      if (!res.ok) throw new Error("API error")
       const data = await res.json()
-      if (data.error) throw new Error(data.error)
       setGameData(data)
     } catch {
       setError(true)
@@ -40,34 +337,28 @@ export default function Home() {
     }
   }, [])
 
-  const toggleLang = useCallback(() => {
-    setLang((prev) => (prev === "tr" ? "en" : "tr"))
-  }, [])
-
   const toggleTheme = useCallback(() => {
     setTheme(resolvedTheme === "dark" ? "light" : "dark")
   }, [resolvedTheme, setTheme])
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background text-foreground">
       {/* Header */}
-      <header className="sticky top-0 z-50 border-b bg-background/80 backdrop-blur-md">
+      <header className="sticky top-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-md">
         <div className="mx-auto flex max-w-4xl items-center justify-between px-4 py-3">
-          <div className="flex items-center gap-2">
-            <svg
-              viewBox="0 0 24 24"
-              className="size-6 text-primary"
-              fill="currentColor"
-              aria-hidden="true"
-            >
-              <path d="M11.979 0C5.678 0 .511 4.86.022 11.037l6.432 2.658c.545-.371 1.203-.59 1.912-.59.063 0 .125.004.188.006l2.861-4.142V8.91c0-2.495 2.028-4.524 4.524-4.524 2.494 0 4.524 2.031 4.524 4.527s-2.03 4.525-4.524 4.525h-.105l-4.076 2.911c0 .052.004.105.004.159 0 1.875-1.515 3.396-3.39 3.396-1.635 0-3.016-1.173-3.331-2.727L.436 15.27C1.862 20.307 6.486 24 11.979 24c6.627 0 12.004-5.373 12.004-12S18.606 0 11.979 0" />
-            </svg>
-            <h1 className="text-sm font-bold md:text-base text-foreground">
+          <div>
+            <h1 className="text-base font-bold text-foreground">
               {t(lang, "title")}
             </h1>
+            <p className="text-xs text-muted-foreground">
+              {t(lang, "subtitle")}
+            </p>
           </div>
           <div className="flex items-center gap-2">
-            <LanguageSwitcher lang={lang} onToggle={toggleLang} />
+            <LanguageSwitcher
+              lang={lang}
+              onToggle={() => setLang((l) => (l === "tr" ? "en" : "tr"))}
+            />
             {mounted ? (
               <Button
                 variant="outline"
@@ -88,81 +379,52 @@ export default function Home() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-4xl px-4 py-6 md:py-10">
-        {/* Hero / Generate Area */}
+      {/* Main Content */}
+      <main className="mx-auto max-w-4xl px-4 py-8">
+        {/* Hero / Generate */}
         {!gameData && !loading && !error && (
-          <section className="flex flex-col items-center justify-center gap-6 py-20 md:py-32 text-center">
-            <div className="flex flex-col items-center gap-3">
-              <div className="relative">
-                <svg
-                  viewBox="0 0 24 24"
-                  className="size-16 text-primary md:size-20"
-                  fill="currentColor"
-                  aria-hidden="true"
-                >
-                  <path d="M11.979 0C5.678 0 .511 4.86.022 11.037l6.432 2.658c.545-.371 1.203-.59 1.912-.59.063 0 .125.004.188.006l2.861-4.142V8.91c0-2.495 2.028-4.524 4.524-4.524 2.494 0 4.524 2.031 4.524 4.527s-2.03 4.525-4.524 4.525h-.105l-4.076 2.911c0 .052.004.105.004.159 0 1.875-1.515 3.396-3.39 3.396-1.635 0-3.016-1.173-3.331-2.727L.436 15.27C1.862 20.307 6.486 24 11.979 24c6.627 0 12.004-5.373 12.004-12S18.606 0 11.979 0" />
-                </svg>
-                <div className="absolute -inset-4 animate-shimmer rounded-full" />
-              </div>
-              <h2 className="text-2xl font-bold text-foreground md:text-4xl text-balance">
+          <div className="flex flex-col items-center justify-center gap-6 py-24 text-center">
+            <div className="flex flex-col items-center gap-2">
+              <h2 className="text-3xl font-bold text-foreground md:text-4xl text-balance">
                 {t(lang, "title")}
               </h2>
-              <p className="max-w-md text-muted-foreground text-pretty">
+              <p className="text-muted-foreground">
                 {t(lang, "subtitle")}
               </p>
             </div>
             <GenerateButton
-              onClick={fetchRandomGame}
+              onClick={fetchGame}
               loading={loading}
               hasGame={false}
               discoverLabel={t(lang, "rollDice")}
               loadingLabel={t(lang, "discovering")}
               newGameLabel={t(lang, "newGame")}
             />
-          </section>
+          </div>
         )}
 
-        {/* Error State */}
+        {/* Loading */}
+        {loading && <GameSkeleton />}
+
+        {/* Error */}
         {error && !loading && (
-          <section className="flex flex-col items-center justify-center gap-4 py-20 text-center">
-            <div className="flex size-16 items-center justify-center rounded-full bg-destructive/10">
-              <AlertCircle className="size-8 text-destructive" />
-            </div>
+          <div className="flex flex-col items-center justify-center gap-4 py-20 text-center">
             <h3 className="text-lg font-semibold text-foreground">
               {t(lang, "errorTitle")}
             </h3>
-            <p className="text-sm text-muted-foreground max-w-sm">
+            <p className="text-sm text-muted-foreground">
               {t(lang, "errorDesc")}
             </p>
-            <Button onClick={fetchRandomGame} variant="outline">
-              {t(lang, "tryAgain")}
-            </Button>
-          </section>
+            <Button onClick={fetchGame}>{t(lang, "tryAgain")}</Button>
+          </div>
         )}
 
-        {/* Loading Skeleton */}
-        {loading && (
-          <section className="flex flex-col gap-6">
+        {/* Game Card + Social Share */}
+        {gameData && !loading && (
+          <div className="flex flex-col gap-6">
             <div className="flex justify-center">
               <GenerateButton
-                onClick={fetchRandomGame}
-                loading={loading}
-                hasGame={true}
-                discoverLabel={t(lang, "rollDice")}
-                loadingLabel={t(lang, "discovering")}
-                newGameLabel={t(lang, "newGame")}
-              />
-            </div>
-            <GameSkeleton />
-          </section>
-        )}
-
-        {/* Game Data Display */}
-        {gameData && !loading && !error && (
-          <section className="flex flex-col gap-6">
-            <div className="flex justify-center">
-              <GenerateButton
-                onClick={fetchRandomGame}
+                onClick={fetchGame}
                 loading={loading}
                 hasGame={true}
                 discoverLabel={t(lang, "rollDice")}
@@ -171,18 +433,14 @@ export default function Home() {
               />
             </div>
             <GameCard data={gameData} lang={lang} />
-            <SocialShare data={gameData} lang={lang} />
-          </section>
+            <SocialShareSection data={gameData} lang={lang} />
+          </div>
         )}
       </main>
 
       {/* Footer */}
-      <footer className="border-t py-6 text-center">
-        <p className="text-xs text-muted-foreground">
-          {lang === "tr"
-            ? "Steam Game Roulette - Valve Corporation ile baglantisi yoktur."
-            : "Steam Game Roulette - Not affiliated with Valve Corporation."}
-        </p>
+      <footer className="border-t border-border/50 py-6 text-center text-xs text-muted-foreground">
+        Steam Game Roulette &middot; Powered by Steam Store API
       </footer>
     </div>
   )
