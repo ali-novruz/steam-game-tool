@@ -220,6 +220,7 @@ export function GameCard({ data, lang }: GameCardProps) {
           game={game}
           screenshotsLabel={t(lang, "screenshots")}
           trailerLabel={t(lang, "trailer")}
+          lang={lang}
         />
 
         {/* Detailed description */}
