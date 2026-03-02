@@ -149,6 +149,8 @@ function VideoPlayer({
   const rawUrl = movie.mp4?.max || movie.mp4?.["480"] || movie.webm?.max || movie.webm?.["480"] || ""
   const directUrl = toHttps(rawUrl)
   const embedUrl = `/api/video-embed?url=${encodeURIComponent(rawUrl)}`
+  console.log("[v0] VideoPlayer movie:", JSON.stringify({ name: movie.name, mp4: movie.mp4, webm: movie.webm }))
+  console.log("[v0] VideoPlayer rawUrl:", rawUrl, "embedUrl:", embedUrl)
 
   return (
     <div

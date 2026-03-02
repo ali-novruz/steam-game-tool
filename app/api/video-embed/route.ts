@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 
 export async function GET(req: NextRequest) {
   const url = req.nextUrl.searchParams.get("url")
+  console.log("[v0] video-embed url param:", url, "full search:", req.nextUrl.search)
   if (!url) return new NextResponse("Missing url", { status: 400 })
 
   const httpsUrl = url.replace(/^http:\/\//, "https://")
