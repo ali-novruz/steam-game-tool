@@ -49,6 +49,11 @@ export const translations: Record<Language, Record<string, string>> = {
     feature2Desc: "Fiyat, puan, fragman ve daha fazlasi",
     feature3Title: "Paylas",
     feature3Desc: "Sosyal medya icin hazir kartlar",
+    searchById: "ID ile Ara",
+    searchPlaceholder: "Steam App ID girin (orn: 730)",
+    searchButton: "Ara",
+    searchError: "Oyun bulunamadi. Lutfen gecerli bir App ID girin.",
+    orText: "veya",
   },
   en: {
     title: "Steam Game Roulette",
@@ -98,6 +103,11 @@ export const translations: Record<Language, Record<string, string>> = {
     feature2Desc: "Price, scores, trailers and more",
     feature3Title: "Share It",
     feature3Desc: "Ready-made cards for social media",
+    searchById: "Search by ID",
+    searchPlaceholder: "Enter Steam App ID (e.g. 730)",
+    searchButton: "Search",
+    searchError: "Game not found. Please enter a valid App ID.",
+    orText: "or",
   },
 }
 

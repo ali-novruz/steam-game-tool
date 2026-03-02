@@ -15,6 +15,7 @@ import {
   Gamepad2,
   Share2,
   Sparkles,
+  Search,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -381,6 +382,8 @@ export function HomeClient() {
   const [lang, setLang] = useState<Language>("tr")
   const { setTheme, resolvedTheme } = useTheme()
   const [mounted, setMounted] = useState(false)
+  const [searchId, setSearchId] = useState("")
+  const [searchError, setSearchError] = useState(false)
 
   useEffect(() => {
     setMounted(true)
@@ -389,6 +392,7 @@ export function HomeClient() {
   const fetchGame = useCallback(async () => {
     setLoading(true)
     setError(false)
+    setSearchError(false)
     try {
       const res = await fetch("/api/steam/random")
       if (!res.ok) throw new Error("API error")
@@ -396,6 +400,35 @@ export function HomeClient() {
       setGameData(data)
     } catch {
       setError(true)
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  const fetchGameById = useCallback(async (id: string) => {
+    if (!id.trim() || !/^\d+$/.test(id.trim())) {
+      setSearchError(true)
+      return
+    }
+    setLoading(true)
+    setError(false)
+    setSearchError(false)
+    try {
+      const res = await fetch(`/api/steam/lookup?id=${id.trim()}`)
+      if (!res.ok) {
+        setSearchError(true)
+        setLoading(false)
+        return
+      }
+      const data = await res.json()
+      if (data.error) {
+        setSearchError(true)
+        setLoading(false)
+        return
+      }
+      setGameData(data)
+    } catch {
+      setSearchError(true)
     } finally {
       setLoading(false)
     }
@@ -487,6 +520,42 @@ export function HomeClient() {
                   newGameLabel={t(lang, "newGame")}
                 />
               </div>
+
+              {/* Search by ID */}
+              <div
+                className="animate-fade-in-up flex w-full max-w-sm flex-col items-center gap-2"
+                style={{ animationDelay: "350ms", animationFillMode: "backwards" }}
+              >
+                <span className="text-xs text-muted-foreground">{t(lang, "orText")}</span>
+                <div className="flex w-full gap-2">
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    placeholder={t(lang, "searchPlaceholder")}
+                    value={searchId}
+                    onChange={(e) => {
+                      setSearchId(e.target.value)
+                      setSearchError(false)
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") fetchGameById(searchId)
+                    }}
+                    className="flex-1 rounded-lg border border-border bg-secondary px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                  />
+                  <Button
+                    onClick={() => fetchGameById(searchId)}
+                    disabled={loading || !searchId.trim()}
+                    className="gap-1.5"
+                  >
+                    <Search className="size-4" />
+                    {t(lang, "searchButton")}
+                  </Button>
+                </div>
+                {searchError && (
+                  <p className="text-xs text-destructive">{t(lang, "searchError")}</p>
+                )}
+              </div>
             </div>
 
             <div className="relative z-10 grid w-full max-w-2xl grid-cols-1 gap-4 md:grid-cols-3">
@@ -532,7 +601,7 @@ export function HomeClient() {
         {/* Game Card + Social Share */}
         {gameData && !loading && (
           <div className="flex flex-col gap-6">
-            <div className="flex justify-center">
+            <div className="flex flex-col items-center gap-3">
               <GenerateButton
                 onClick={fetchGame}
                 loading={loading}
@@ -541,6 +610,35 @@ export function HomeClient() {
                 loadingLabel={t(lang, "discovering")}
                 newGameLabel={t(lang, "newGame")}
               />
+              <div className="flex w-full max-w-sm items-center gap-2">
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  placeholder={t(lang, "searchPlaceholder")}
+                  value={searchId}
+                  onChange={(e) => {
+                    setSearchId(e.target.value)
+                    setSearchError(false)
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") fetchGameById(searchId)
+                  }}
+                  className="flex-1 rounded-lg border border-border bg-secondary px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                />
+                <Button
+                  size="sm"
+                  onClick={() => fetchGameById(searchId)}
+                  disabled={loading || !searchId.trim()}
+                  className="gap-1.5"
+                >
+                  <Search className="size-3.5" />
+                  {t(lang, "searchButton")}
+                </Button>
+              </div>
+              {searchError && (
+                <p className="text-xs text-destructive">{t(lang, "searchError")}</p>
+              )}
             </div>
             <GameCard data={gameData} lang={lang} />
             <SocialShareSection data={gameData} lang={lang} />
