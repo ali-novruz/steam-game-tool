@@ -25,31 +25,7 @@ function toHttps(url: string) {
   return url ? url.replace(/^http:\/\//, "https://") : ""
 }
 
-/* ------------------------------------------------------------------ */
-/*  Scroll lock                                                        */
-/* ------------------------------------------------------------------ */
-function useScrollLock(active: boolean) {
-  useEffect(() => {
-    if (!active) return
-    const scrollY = window.scrollY
-    const body = document.body
-    body.style.position = "fixed"
-    body.style.top = `-${scrollY}px`
-    body.style.left = "0"
-    body.style.right = "0"
-    body.style.overflow = "hidden"
-    body.style.width = "100%"
-    return () => {
-      body.style.position = ""
-      body.style.top = ""
-      body.style.left = ""
-      body.style.right = ""
-      body.style.overflow = ""
-      body.style.width = ""
-      window.scrollTo(0, scrollY)
-    }
-  }, [active])
-}
+
 
 /* ------------------------------------------------------------------ */
 /*  Lightbox                                                           */
@@ -65,8 +41,6 @@ function Lightbox({
   onClose: () => void
   downloadLabel: string
 }) {
-  useScrollLock(true)
-
   useEffect(() => {
     const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose() }
     document.addEventListener("keydown", handler)
@@ -138,8 +112,6 @@ function VideoPlayer({
   onClose: () => void
   lang: "tr" | "en"
 }) {
-  useScrollLock(true)
-
   useEffect(() => {
     const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose() }
     document.addEventListener("keydown", handler)
