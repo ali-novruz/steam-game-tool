@@ -1,5 +1,5 @@
 "use client"
-
+// v2 - social-share + video proxy
 import { useState, useCallback, useEffect } from "react"
 import { useTheme } from "next-themes"
 import { Moon, Sun, AlertCircle } from "lucide-react"

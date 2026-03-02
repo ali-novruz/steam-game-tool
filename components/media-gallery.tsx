@@ -57,9 +57,14 @@ function toHttps(url: string) {
   return url ? url.replace(/^http:\/\//, "https://") : ""
 }
 
-function proxyUrl(raw: string) {
+function proxyImageUrl(raw: string) {
   if (!raw) return ""
   return `/api/proxy-image?url=${encodeURIComponent(raw)}`
+}
+
+function proxyVideoUrl(raw: string) {
+  if (!raw) return ""
+  return `/api/proxy-video?url=${encodeURIComponent(raw)}`
 }
 
 /* ------------------------------------------------------------------ */
@@ -88,7 +93,7 @@ function Lightbox({
 
   const handleDownload = async () => {
     try {
-      const res = await fetch(proxyUrl(src))
+      const res = await fetch(proxyImageUrl(src))
       const blob = await res.blob()
       const url = URL.createObjectURL(blob)
       const a = document.createElement("a")
@@ -172,18 +177,27 @@ function VideoPlayer({
     return () => document.removeEventListener("keydown", handler)
   }, [onClose])
 
-  // Convert all URLs to HTTPS directly - Steam CDN supports HTTPS
-  const mp4Max = toHttps(movie.mp4?.max || "")
-  const mp4_480 = toHttps(movie.mp4?.["480"] || "")
-  const webmMax = toHttps(movie.webm?.max || "")
-  const webm480 = toHttps(movie.webm?.["480"] || "")
+  // Raw URLs from Steam API (may be http://)
+  const rawMp4Max = movie.mp4?.max || ""
+  const rawMp4_480 = movie.mp4?.["480"] || ""
+  const rawWebmMax = movie.webm?.max || ""
+  const rawWebm480 = movie.webm?.["480"] || ""
+
+  // Use proxy to avoid mixed-content / CORS issues
+  const mp4MaxProxy = proxyVideoUrl(rawMp4Max)
+  const mp4_480Proxy = proxyVideoUrl(rawMp4_480)
+  const webmMaxProxy = proxyVideoUrl(rawWebmMax)
+  const webm480Proxy = proxyVideoUrl(rawWebm480)
+
+  // Direct HTTPS fallback
+  const directUrl = toHttps(rawMp4Max || rawMp4_480 || rawWebmMax || rawWebm480)
 
   const handleDownloadVideo = async () => {
-    const url = mp4Max || mp4_480
-    if (!url) return
+    const raw = rawMp4Max || rawMp4_480
+    if (!raw) return
     setDownloadingVideo(true)
     try {
-      const res = await fetch(url)
+      const res = await fetch(proxyVideoUrl(raw))
       const blob = await res.blob()
       const blobUrl = URL.createObjectURL(blob)
       const a = document.createElement("a")
@@ -194,7 +208,8 @@ function VideoPlayer({
       document.body.removeChild(a)
       URL.revokeObjectURL(blobUrl)
     } catch {
-      window.open(url, "_blank")
+      // Fallback: open direct https in new tab
+      window.open(directUrl, "_blank")
     } finally {
       setDownloadingVideo(false)
     }
@@ -222,12 +237,12 @@ function VideoPlayer({
               className="size-full object-contain"
               onError={() => setVideoError(true)}
             >
-              {/* MP4 sources - most compatible */}
-              {mp4Max && <source src={mp4Max} type="video/mp4" />}
-              {mp4_480 && <source src={mp4_480} type="video/mp4" />}
-              {/* WebM fallback */}
-              {webmMax && <source src={webmMax} type="video/webm" />}
-              {webm480 && <source src={webm480} type="video/webm" />}
+              {/* MP4 via proxy - most compatible */}
+              {mp4MaxProxy && <source src={mp4MaxProxy} type="video/mp4" />}
+              {mp4_480Proxy && <source src={mp4_480Proxy} type="video/mp4" />}
+              {/* WebM via proxy fallback */}
+              {webmMaxProxy && <source src={webmMaxProxy} type="video/webm" />}
+              {webm480Proxy && <source src={webm480Proxy} type="video/webm" />}
               <track kind="captions" />
             </video>
           ) : (
@@ -239,7 +254,7 @@ function VideoPlayer({
                   : "Video could not load. Try opening directly:"}
               </p>
               <Button variant="secondary" size="sm" asChild className="gap-1.5">
-                <a href={mp4Max || mp4_480 || webmMax} target="_blank" rel="noopener noreferrer">
+                <a href={directUrl} target="_blank" rel="noopener noreferrer">
                   <Play className="size-3.5" />
                   {lang === "tr" ? "Yeni Sekmede Ac" : "Open in New Tab"}
                 </a>

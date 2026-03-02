@@ -56,25 +56,34 @@ export async function GET() {
       let metacritic = gameData.metacritic || null
       if (!metacritic) {
         try {
-          const searchRes = await fetch(
-            `https://api.opencritic.com/api/game/search?criteria=${encodeURIComponent(gameData.name)}`,
-            {
-              headers: { "User-Agent": "Mozilla/5.0" },
-              signal: AbortSignal.timeout(3000),
-            }
-          )
+          const ocSearchUrl = `https://api.opencritic.com/api/game/search?criteria=${encodeURIComponent(gameData.name)}`
+          console.log("[v0] OpenCritic search for:", gameData.name, ocSearchUrl)
+          const searchRes = await fetch(ocSearchUrl, {
+            headers: {
+              "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+              Accept: "application/json",
+            },
+            signal: AbortSignal.timeout(5000),
+          })
+          console.log("[v0] OpenCritic search status:", searchRes.status)
           if (searchRes.ok) {
             const results = await searchRes.json()
+            console.log("[v0] OpenCritic search results:", JSON.stringify(results?.slice(0, 2)))
             if (results?.[0]?.id) {
               const gameRes = await fetch(
                 `https://api.opencritic.com/api/game/${results[0].id}`,
                 {
-                  headers: { "User-Agent": "Mozilla/5.0" },
-                  signal: AbortSignal.timeout(3000),
+                  headers: {
+                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+                    Accept: "application/json",
+                  },
+                  signal: AbortSignal.timeout(5000),
                 }
               )
+              console.log("[v0] OpenCritic game detail status:", gameRes.status)
               if (gameRes.ok) {
                 const ocData = await gameRes.json()
+                console.log("[v0] OpenCritic topCriticScore:", ocData?.topCriticScore, "name:", ocData?.name)
                 if (ocData?.topCriticScore && ocData.topCriticScore > 0) {
                   metacritic = {
                     score: Math.round(ocData.topCriticScore),
@@ -85,8 +94,8 @@ export async function GET() {
               }
             }
           }
-        } catch {
-          // OpenCritic lookup failed, continue without it
+        } catch (err) {
+          console.log("[v0] OpenCritic lookup failed:", err)
         }
       }
 
