@@ -157,10 +157,7 @@ export default function Home() {
               loadingLabel={t(lang, "discovering")}
               newGameLabel={t(lang, "newGame")}
             />
-            <p className="text-xs text-muted-foreground">
-              {"3,551 "}
-              {lang === "tr" ? "oyun arasindan rastgele sec" : "games to discover"}
-            </p>
+
           </section>
         )}
 
