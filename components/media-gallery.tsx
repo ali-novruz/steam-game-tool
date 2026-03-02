@@ -179,28 +179,15 @@ function VideoPlayer({
         </div>
         <div className="mt-3 flex items-center justify-between">
           <p className="text-sm font-medium text-white truncate pr-4">{movie.name}</p>
-          <div className="flex gap-2 shrink-0">
-            <Button
-              variant="secondary"
-              size="sm"
-              asChild
-              className="gap-1.5 bg-white/10 text-white hover:bg-white/20 border-0"
-            >
-              <a href={directUrl} target="_blank" rel="noopener noreferrer">
-                <Download className="size-3.5" />
-                {lang === "tr" ? "Video Indir" : "Download"}
-              </a>
-            </Button>
-            <Button
-              variant="secondary"
-              size="icon-sm"
-              onClick={onClose}
-              aria-label="Close"
-              className="rounded-full bg-white/10 text-white hover:bg-white/20 border-0"
-            >
-              <X className="size-4" />
-            </Button>
-          </div>
+          <Button
+            variant="secondary"
+            size="icon-sm"
+            onClick={onClose}
+            aria-label="Close"
+            className="rounded-full bg-white/10 text-white hover:bg-white/20 border-0 shrink-0"
+          >
+            <X className="size-4" />
+          </Button>
         </div>
       </div>
     </div>
