@@ -180,9 +180,9 @@ export function AppShell() {
             {/* Stats */}
             <div className="flex items-center gap-8 text-center animate-fade-in-up" style={{ animationDelay: "450ms" }}>
               {[
-                { val: "3,500+", label: t(lang, "statGames") },
-                { val: "30+", label: t(lang, "statGenres") },
-                { val: "500+", label: t(lang, "statFree") },
+                { val: "157,000+", label: t(lang, "statGames") },
+                { val: "50+", label: t(lang, "statGenres") },
+                { val: "5,000+", label: t(lang, "statFree") },
               ].map((s) => (
                 <div key={s.label} className="flex flex-col gap-0.5">
                   <span className="text-lg font-bold text-primary">{s.val}</span>
