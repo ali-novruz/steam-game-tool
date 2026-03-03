@@ -15,5 +15,5 @@ const lines = [
   "",
 ];
 
-writeFileSync("lib/steam-games.ts", lines.join("\n"));
+writeFileSync("/vercel/share/v0-project/lib/steam-games.ts", lines.join("\n"));
 console.log(`Wrote ${ids.length} game IDs to lib/steam-games.ts`);
