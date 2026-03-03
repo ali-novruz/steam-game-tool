@@ -8,27 +8,33 @@ function loadGameIds(): number[] {
 
   try {
     const filePath = join(process.cwd(), "data", "appidler.txt")
-    const raw = readFileSync(filePath, "utf-8")
-    const lines = raw.split("\n")
+    let raw = readFileSync(filePath, "utf-8")
+
+    // Strip BOM and any non-ASCII characters
+    raw = raw.replace(/^\uFEFF/, "").replace(/[^\x20-\x7E\n\r]/g, "")
+
+    const lines = raw.split(/\r?\n/)
     const ids: number[] = []
 
     for (const line of lines) {
-      // Each line has space-separated digits like " 1 0 0 9 0" = 10090
-      const stripped = line.replace(/\s+/g, "").trim()
-      if (stripped.length > 0) {
-        const num = parseInt(stripped, 10)
-        if (!isNaN(num) && num > 0) {
+      // Each line has space-separated digits like " 3 5 0 0" = 3500
+      const digits = line.replace(/\s+/g, "").trim()
+      if (digits.length > 0 && /^\d+$/.test(digits)) {
+        const num = parseInt(digits, 10)
+        if (num > 0) {
           ids.push(num)
         }
       }
     }
 
-    cachedIds = ids
-    console.log(`Loaded ${ids.length} game IDs from appidler.txt`)
-    return ids
+    // Deduplicate
+    cachedIds = [...new Set(ids)]
+    console.log(`[v0] Loaded ${cachedIds.length} unique game IDs from appidler.txt (${lines.length} lines)`)
+    return cachedIds
   } catch (err) {
-    console.error("Failed to load appidler.txt, using empty list:", err)
-    cachedIds = []
+    console.error("[v0] Failed to load appidler.txt:", err)
+    // Fallback: a small set of known popular game IDs
+    cachedIds = [730,570,440,304930,1091500,578080,1172470,292030,1245620,271590,1174180,252490,359550,413150]
     return cachedIds
   }
 }
