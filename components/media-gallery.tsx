@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback, useEffect } from "react"
+import { useState, useCallback, useEffect, useRef } from "react"
 import useEmblaCarousel from "embla-carousel-react"
 import {
   ChevronLeft,
@@ -101,18 +101,7 @@ function Lightbox({
 }
 
 /* ------------------------------------------------------------------ */
-/*  Convert Steam CDN URL to working HTTPS video URL                   */
-/* ------------------------------------------------------------------ */
-function toSteamVideoHttps(url: string): string {
-  if (!url) return ""
-  return url
-    .replace(/^http:\/\//, "https://")
-    .replace("cdn.akamai.steamstatic.com", "steamcdn-a.akamaihd.net")
-    .replace("video.akamai.steamstatic.com", "steamcdn-a.akamaihd.net")
-}
-
-/* ------------------------------------------------------------------ */
-/*  Video Player - direct HTTPS CDN playback                           */
+/*  Video Player - uses all HTTPS URL variants with fallback           */
 /* ------------------------------------------------------------------ */
 function VideoPlayer({
   movie,
@@ -123,7 +112,9 @@ function VideoPlayer({
   onClose: () => void
   lang: "tr" | "en"
 }) {
-  const [srcIndex, setSrcIndex] = useState(0)
+  const videoRef = useRef<HTMLVideoElement>(null)
+  const [failed, setFailed] = useState(false)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose() }
@@ -131,25 +122,85 @@ function VideoPlayer({
     return () => document.removeEventListener("keydown", handler)
   }, [onClose])
 
-  // Build a list of all possible video sources to try in order
-  const sources: { url: string; type: string }[] = []
-  if (movie.mp4?.max) sources.push({ url: movie.mp4.max, type: "video/mp4" })
-  if (movie.mp4?.["480"]) sources.push({ url: movie.mp4["480"], type: "video/mp4" })
-  if (movie.webm?.max) sources.push({ url: movie.webm.max, type: "video/webm" })
-  if (movie.webm?.["480"]) sources.push({ url: movie.webm["480"], type: "video/webm" })
+  // Build HTTPS URLs for all CDN variants
+  function httpsVariants(httpUrl: string): string[] {
+    if (!httpUrl) return []
+    const base = httpUrl.replace(/^http:\/\//, "https://")
+    const variants = [base]
+    // Also try alternate CDN domains
+    if (base.includes("cdn.akamai.steamstatic.com")) {
+      variants.push(base.replace("cdn.akamai.steamstatic.com", "steamcdn-a.akamaihd.net"))
+      variants.push(base.replace("cdn.akamai.steamstatic.com", "cdn.cloudflare.steamstatic.com"))
+    }
+    if (base.includes("video.akamai.steamstatic.com")) {
+      variants.push(base.replace("video.akamai.steamstatic.com", "steamcdn-a.akamaihd.net"))
+    }
+    return variants
+  }
 
-  const current = sources[srcIndex]
-  const hasVideo = sources.length > 0
-  const allFailed = srcIndex >= sources.length
+  // Collect all possible source URLs
+  const allUrls: { url: string; type: string }[] = []
+  const rawMp4 = movie.mp4?.max || movie.mp4?.["480"] || ""
+  const rawWebm = movie.webm?.max || movie.webm?.["480"] || ""
 
-  const handleError = () => {
-    // Try next source
-    if (srcIndex < sources.length - 1) {
-      setSrcIndex(srcIndex + 1)
-    } else {
-      setSrcIndex(sources.length) // mark all failed
+  if (rawMp4) {
+    for (const u of httpsVariants(rawMp4)) {
+      allUrls.push({ url: u, type: "video/mp4" })
     }
   }
+  if (rawWebm) {
+    for (const u of httpsVariants(rawWebm)) {
+      allUrls.push({ url: u, type: "video/webm" })
+    }
+  }
+
+  console.log("[v0] VideoPlayer allUrls:", JSON.stringify(allUrls.map(u => u.url)))
+  console.log("[v0] VideoPlayer raw mp4:", rawMp4, "raw webm:", rawWebm)
+
+  const hasVideo = allUrls.length > 0
+
+  // Try loading video sources one by one via JS
+  useEffect(() => {
+    if (!hasVideo || !videoRef.current) return
+    const video = videoRef.current
+    let idx = 0
+
+    function tryNext() {
+      if (idx >= allUrls.length) {
+        console.log("[v0] VideoPlayer all sources failed")
+        setFailed(true)
+        setLoading(false)
+        return
+      }
+      const src = allUrls[idx]
+      console.log("[v0] VideoPlayer trying:", src.url)
+      video.src = src.url
+      video.load()
+    }
+
+    function onCanPlay() {
+      console.log("[v0] VideoPlayer canplay:", video.src)
+      setLoading(false)
+      setFailed(false)
+      video.play().catch(() => {})
+    }
+
+    function onError() {
+      console.log("[v0] VideoPlayer error on:", allUrls[idx]?.url)
+      idx++
+      tryNext()
+    }
+
+    video.addEventListener("canplay", onCanPlay)
+    video.addEventListener("error", onError)
+    tryNext()
+
+    return () => {
+      video.removeEventListener("canplay", onCanPlay)
+      video.removeEventListener("error", onError)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasVideo])
 
   return (
     <div
@@ -161,34 +212,28 @@ function VideoPlayer({
     >
       <div className="relative w-full max-w-4xl px-4" onClick={(e) => e.stopPropagation()}>
         <div className="relative aspect-video w-full overflow-hidden rounded-lg bg-black">
-          {hasVideo && !allFailed ? (
-            <video
-              key={srcIndex}
-              controls
-              autoPlay
-              playsInline
-              className="size-full object-contain"
-              onError={handleError}
-            >
-              <source src={toSteamVideoHttps(current.url)} type={current.type} />
-              <track kind="captions" />
-            </video>
+          {hasVideo && !failed ? (
+            <>
+              {loading && (
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="size-8 animate-spin rounded-full border-2 border-white/20 border-t-white" />
+                </div>
+              )}
+              <video
+                ref={videoRef}
+                controls
+                playsInline
+                className="size-full object-contain"
+              >
+                <track kind="captions" />
+              </video>
+            </>
           ) : (
             <div className="flex size-full flex-col items-center justify-center gap-3 text-white">
               <Play className="size-10 text-white/40" />
               <p className="text-sm text-white/50">
                 {lang === "tr" ? "Video yuklenemedi" : "Video unavailable"}
               </p>
-              {hasVideo && (
-                <a
-                  href={`https://store.steampowered.com/app/${movie.id || ""}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-xs text-primary underline"
-                >
-                  {lang === "tr" ? "Steam'de izle" : "Watch on Steam"}
-                </a>
-              )}
             </div>
           )}
         </div>
