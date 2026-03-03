@@ -8,7 +8,7 @@ export async function GET() {
 
   while (attempts < MAX_RETRIES) {
     attempts++
-    const appId = getRandomGameId()
+    const appId = await getRandomGameId()
 
     try {
       const [detailsRes, reviewsRes] = await Promise.all([
