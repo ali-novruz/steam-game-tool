@@ -143,7 +143,12 @@ function VideoPlayer({
   const hasVideo = sources.length > 0
   const allFailed = srcIndex >= sources.length
 
+  console.log("[v0] VideoPlayer sources:", JSON.stringify(sources.map(s => ({ url: s.url.substring(0, 80), type: s.type }))))
+  console.log("[v0] VideoPlayer srcIndex:", srcIndex, "hasVideo:", hasVideo, "allFailed:", allFailed)
+  if (current) console.log("[v0] VideoPlayer current converted URL:", toSteamVideoHttps(current.url))
+
   const handleError = () => {
+    console.log("[v0] VideoPlayer error on srcIndex:", srcIndex, "url:", current?.url)
     // Try next source
     if (srcIndex < sources.length - 1) {
       setSrcIndex(srcIndex + 1)
