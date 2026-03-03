@@ -101,7 +101,7 @@ function Lightbox({
 }
 
 /* ------------------------------------------------------------------ */
-/*  Video Player - iframe-based for reliable playback                  */
+/*  Video Player - proxy-based for reliable playback                   */
 /* ------------------------------------------------------------------ */
 function VideoPlayer({
   movie,
@@ -112,16 +112,22 @@ function VideoPlayer({
   onClose: () => void
   lang: "tr" | "en"
 }) {
+  const [error, setError] = useState(false)
+
   useEffect(() => {
     const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose() }
     document.addEventListener("keydown", handler)
     return () => document.removeEventListener("keydown", handler)
   }, [onClose])
 
-  const rawUrl = movie.mp4?.max || movie.mp4?.["480"] || movie.webm?.max || movie.webm?.["480"] || ""
-  const directUrl = toHttps(rawUrl)
+  // Pick best available source - keep original HTTP URL for proxy
+  const mp4Url = movie.mp4?.max || movie.mp4?.["480"] || ""
+  const webmUrl = movie.webm?.max || movie.webm?.["480"] || ""
+  const rawUrl = mp4Url || webmUrl
   const hasVideo = rawUrl.length > 0
-  const embedUrl = hasVideo ? `/api/video-embed?url=${encodeURIComponent(rawUrl)}` : ""
+
+  // Route through our proxy which fetches the HTTP URL server-side
+  const proxyUrl = hasVideo ? `/api/proxy-video?url=${encodeURIComponent(rawUrl)}` : ""
 
   return (
     <div
@@ -133,19 +139,33 @@ function VideoPlayer({
     >
       <div className="relative w-full max-w-4xl px-4" onClick={(e) => e.stopPropagation()}>
         <div className="relative aspect-video w-full overflow-hidden rounded-lg bg-black">
-          {hasVideo ? (
-            <iframe
-              src={embedUrl}
-              className="size-full border-0"
-              allow="autoplay; fullscreen"
-              title={movie.name}
-            />
+          {hasVideo && !error ? (
+            <video
+              controls
+              autoPlay
+              playsInline
+              className="size-full object-contain"
+              onError={() => setError(true)}
+            >
+              <source src={proxyUrl} type={rawUrl.includes(".webm") ? "video/webm" : "video/mp4"} />
+              <track kind="captions" />
+            </video>
           ) : (
             <div className="flex size-full flex-col items-center justify-center gap-3 text-white">
               <Play className="size-10 text-white/40" />
               <p className="text-sm text-white/50">
                 {lang === "tr" ? "Video yuklenemedi" : "Video unavailable"}
               </p>
+              {hasVideo && (
+                <a
+                  href={toHttps(rawUrl)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs text-primary underline"
+                >
+                  {lang === "tr" ? "Tarayicide ac" : "Open in browser"}
+                </a>
+              )}
             </div>
           )}
         </div>
