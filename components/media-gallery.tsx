@@ -101,7 +101,19 @@ function Lightbox({
 }
 
 /* ------------------------------------------------------------------ */
-/*  Video Player - proxy-based for reliable playback                   */
+/*  Convert Steam CDN URL to working HTTPS video URL                   */
+/* ------------------------------------------------------------------ */
+function toSteamVideoHttps(url: string): string {
+  if (!url) return ""
+  // Replace HTTP with HTTPS and swap to Cloudflare CDN which supports HTTPS
+  return url
+    .replace(/^http:\/\//, "https://")
+    .replace("cdn.akamai.steamstatic.com", "cdn.cloudflare.steamstatic.com")
+    .replace("video.akamai.steamstatic.com", "cdn.cloudflare.steamstatic.com")
+}
+
+/* ------------------------------------------------------------------ */
+/*  Video Player - direct HTTPS CDN playback                           */
 /* ------------------------------------------------------------------ */
 function VideoPlayer({
   movie,
@@ -112,7 +124,7 @@ function VideoPlayer({
   onClose: () => void
   lang: "tr" | "en"
 }) {
-  const [error, setError] = useState(false)
+  const [srcIndex, setSrcIndex] = useState(0)
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose() }
@@ -120,14 +132,25 @@ function VideoPlayer({
     return () => document.removeEventListener("keydown", handler)
   }, [onClose])
 
-  // Pick best available source - keep original HTTP URL for proxy
-  const mp4Url = movie.mp4?.max || movie.mp4?.["480"] || ""
-  const webmUrl = movie.webm?.max || movie.webm?.["480"] || ""
-  const rawUrl = mp4Url || webmUrl
-  const hasVideo = rawUrl.length > 0
+  // Build a list of all possible video sources to try in order
+  const sources: { url: string; type: string }[] = []
+  if (movie.mp4?.max) sources.push({ url: movie.mp4.max, type: "video/mp4" })
+  if (movie.mp4?.["480"]) sources.push({ url: movie.mp4["480"], type: "video/mp4" })
+  if (movie.webm?.max) sources.push({ url: movie.webm.max, type: "video/webm" })
+  if (movie.webm?.["480"]) sources.push({ url: movie.webm["480"], type: "video/webm" })
 
-  // Route through our proxy which fetches the HTTP URL server-side
-  const proxyUrl = hasVideo ? `/api/proxy-video?url=${encodeURIComponent(rawUrl)}` : ""
+  const current = sources[srcIndex]
+  const hasVideo = sources.length > 0
+  const allFailed = srcIndex >= sources.length
+
+  const handleError = () => {
+    // Try next source
+    if (srcIndex < sources.length - 1) {
+      setSrcIndex(srcIndex + 1)
+    } else {
+      setSrcIndex(sources.length) // mark all failed
+    }
+  }
 
   return (
     <div
@@ -139,15 +162,16 @@ function VideoPlayer({
     >
       <div className="relative w-full max-w-4xl px-4" onClick={(e) => e.stopPropagation()}>
         <div className="relative aspect-video w-full overflow-hidden rounded-lg bg-black">
-          {hasVideo && !error ? (
+          {hasVideo && !allFailed ? (
             <video
+              key={srcIndex}
               controls
               autoPlay
               playsInline
               className="size-full object-contain"
-              onError={() => setError(true)}
+              onError={handleError}
             >
-              <source src={proxyUrl} type={rawUrl.includes(".webm") ? "video/webm" : "video/mp4"} />
+              <source src={toSteamVideoHttps(current.url)} type={current.type} />
               <track kind="captions" />
             </video>
           ) : (
@@ -158,12 +182,12 @@ function VideoPlayer({
               </p>
               {hasVideo && (
                 <a
-                  href={toHttps(rawUrl)}
+                  href={`https://store.steampowered.com/app/${movie.id || ""}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-xs text-primary underline"
                 >
-                  {lang === "tr" ? "Tarayicide ac" : "Open in browser"}
+                  {lang === "tr" ? "Steam'de izle" : "Watch on Steam"}
                 </a>
               )}
             </div>
