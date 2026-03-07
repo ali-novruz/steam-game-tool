@@ -13,48 +13,33 @@ import type { GameData, Language } from "@/lib/types"
 import { t } from "@/lib/i18n"
 
 /* ------------------------------------------------------------------ */
-/*  Game Roulette Logo - Dice + Roulette inspired                      */
+/*  Game Roulette Logo - Simple dice design                            */
 /* ------------------------------------------------------------------ */
 function RouletteLogo({ className, size = "md" }: { className?: string; size?: "sm" | "md" | "lg" }) {
   const sizes = {
     sm: "size-7",
     md: "size-10",
-    lg: "size-20 md:size-24",
+    lg: "size-16 md:size-20",
   }
   return (
-    <div className={`${sizes[size]} ${className} relative`}>
-      <svg viewBox="0 0 100 100" className="size-full" aria-hidden="true">
-        {/* Outer roulette wheel */}
-        <circle cx="50" cy="50" r="48" fill="none" stroke="currentColor" strokeWidth="3" className="text-primary" />
-        <circle cx="50" cy="50" r="42" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-primary/50" />
+    <div className={`${sizes[size]} ${className}`}>
+      <svg viewBox="0 0 48 48" className="size-full" aria-hidden="true">
+        {/* Dice body with gradient */}
+        <defs>
+          <linearGradient id="diceGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="currentColor" className="text-primary" />
+            <stop offset="100%" stopColor="currentColor" className="text-primary/70" />
+          </linearGradient>
+        </defs>
+        <rect x="4" y="4" width="40" height="40" rx="8" fill="url(#diceGrad)" />
         
-        {/* Roulette segments */}
-        {[0, 45, 90, 135, 180, 225, 270, 315].map((angle, i) => (
-          <line
-            key={angle}
-            x1="50"
-            y1="8"
-            x2="50"
-            y2="20"
-            stroke="currentColor"
-            strokeWidth="2"
-            className={i % 2 === 0 ? "text-primary" : "text-primary/60"}
-            transform={`rotate(${angle} 50 50)`}
-          />
-        ))}
-        
-        {/* Inner dice face */}
-        <rect x="28" y="28" width="44" height="44" rx="8" fill="currentColor" className="text-primary" />
-        
-        {/* Dice dots (showing 5 pattern) */}
-        <circle cx="38" cy="38" r="4" fill="currentColor" className="text-background" />
-        <circle cx="62" cy="38" r="4" fill="currentColor" className="text-background" />
-        <circle cx="50" cy="50" r="4" fill="currentColor" className="text-background" />
-        <circle cx="38" cy="62" r="4" fill="currentColor" className="text-background" />
-        <circle cx="62" cy="62" r="4" fill="currentColor" className="text-background" />
-        
-        {/* Spinning indicator at top */}
-        <polygon points="50,2 45,10 55,10" fill="currentColor" className="text-primary" />
+        {/* Dice dots - 6 pattern */}
+        <circle cx="14" cy="14" r="3.5" fill="currentColor" className="text-background" />
+        <circle cx="14" cy="24" r="3.5" fill="currentColor" className="text-background" />
+        <circle cx="14" cy="34" r="3.5" fill="currentColor" className="text-background" />
+        <circle cx="34" cy="14" r="3.5" fill="currentColor" className="text-background" />
+        <circle cx="34" cy="24" r="3.5" fill="currentColor" className="text-background" />
+        <circle cx="34" cy="34" r="3.5" fill="currentColor" className="text-background" />
       </svg>
     </div>
   )
