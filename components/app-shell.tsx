@@ -172,9 +172,9 @@ export function AppShell() {
 
             {/* Feature cards */}
             <div className="grid w-full max-w-lg grid-cols-3 gap-3 animate-fade-in-up" style={{ animationDelay: "350ms" }}>
-              <FeatureCard icon={<Dices className="size-5" />} title={t(lang, "rollDice")} desc={lang === "tr" ? "Tek tikla rastgele oyun" : "One click, random game"} />
-              <FeatureCard icon={<Gamepad2 className="size-5" />} title={lang === "tr" ? "Detayli Bilgi" : "Full Details"} desc={lang === "tr" ? "Fiyat, puan, fragman" : "Price, scores, trailers"} />
-              <FeatureCard icon={<Share2 className="size-5" />} title={t(lang, "share")} desc={lang === "tr" ? "Sosyal medya kartlari" : "Social media cards"} />
+              <FeatureCard icon={<Dices className="size-5" />} title={t(lang, "rollDice")} desc={lang === "tr" ? "Tek tıkla rastgele oyun" : "One click, random game"} />
+              <FeatureCard icon={<Gamepad2 className="size-5" />} title={lang === "tr" ? "Detaylı Bilgi" : "Full Details"} desc={lang === "tr" ? "Fiyat, puan, fragman" : "Price, scores, trailers"} />
+              <FeatureCard icon={<Share2 className="size-5" />} title={t(lang, "share")} desc={lang === "tr" ? "Sosyal medya kartları" : "Social media cards"} />
             </div>
 
             {/* Stats */}

@@ -128,7 +128,7 @@ export function SocialShare({ data, lang }: SocialShareProps) {
           <Button variant="outline" size="sm" onClick={handleCopyText} className="gap-1.5">
             {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
             {copied
-              ? lang === "tr" ? "Kopyalandi!" : "Copied!"
+              ? lang === "tr" ? "Kopyalandı!" : "Copied!"
               : lang === "tr" ? "Metni Kopyala" : "Copy Text"}
           </Button>
           <Button variant="outline" size="sm" asChild>

@@ -15,7 +15,7 @@ export function LanguageSwitcher({ lang, onToggle }: LanguageSwitcherProps) {
       size="sm"
       onClick={onToggle}
       className="gap-1.5 font-mono text-xs"
-      aria-label={lang === "tr" ? "Switch to English" : "Turkceye gecis"}
+      aria-label={lang === "tr" ? "Switch to English" : "Türkçe'ye geçiş"}
     >
       <span className={lang === "tr" ? "font-bold text-primary" : "text-muted-foreground"}>
         TR

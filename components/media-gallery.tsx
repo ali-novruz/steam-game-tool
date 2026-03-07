@@ -232,7 +232,7 @@ function VideoPlayer({
             <div className="flex size-full flex-col items-center justify-center gap-3 text-white">
               <Play className="size-10 text-white/40" />
               <p className="text-sm text-white/50">
-                {lang === "tr" ? "Video yuklenemedi" : "Video unavailable"}
+                {lang === "tr" ? "Video yüklenemedi" : "Video unavailable"}
               </p>
             </div>
           )}
@@ -329,7 +329,7 @@ export function MediaGallery({
                       }}
                       type="button"
                       className="group relative aspect-video w-full shrink-0 overflow-hidden rounded-lg bg-secondary cursor-pointer md:w-[calc(50%-0.375rem)]"
-                      aria-label={`${lang === "tr" ? "Buyut" : "Enlarge"}: Screenshot ${ss.id}`}
+                      aria-label={`${lang === "tr" ? "Büyüt" : "Enlarge"}: Screenshot ${ss.id}`}
                     >
                       <img
                         src={ss.path_full}
@@ -380,7 +380,7 @@ export function MediaGallery({
           src={lightboxSrc}
           alt={`${game.name} screenshot`}
           onClose={() => setLightboxSrc(null)}
-          downloadLabel={lang === "tr" ? "Indir" : "Download"}
+          downloadLabel={lang === "tr" ? "İndir" : "Download"}
         />
       )}
 
