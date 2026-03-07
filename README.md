@@ -1,35 +1,98 @@
-# steam-game-tool
+# Steam Game Roulette | Steam Oyun Ruleti
 
-This is a [Next.js](https://nextjs.org) project bootstrapped with [v0](https://v0.app).
+Steam’deki **genel oyunlar** arasından rastgele bir oyun seçmeye yarayan web uygulaması.  
+A web app that picks a random game from the **general Steam catalog**.
 
-## Built with v0
+- Demo / Canlı demo: https://steamgameroulette.vercel.app/
 
-This repository is linked to a [v0](https://v0.app) project. You can continue developing by visiting the link below -- start new chats to make changes, and v0 will push commits directly to this repo. Every merge to `main` will automatically deploy.
+---
 
-[Continue working on v0 →](https://v0.app/chat/projects/prj_4XkAqFcVt1XBFVB1y4Rr7gASPpD9)
+## Özellikler (TR)
+- Genel Steam oyunları arasından rastgele oyun seçimi (roulette)
+- Basit ve hızlı arayüz
+- Mobil uyumlu tasarım
 
-## Getting Started
+## Features (EN)
+- Random game selection from the general Steam catalog (roulette)
+- Clean and fast UI
+- Mobile-friendly (responsive)
 
-First, run the development server:
+---
 
+## Nasıl çalışır? (TR)
+Uygulama, Steam oyun verisini bir kaynaktan alır (örn. Steam Store endpoint’leri / üçüncü parti Steam katalog servisi / lokal dataset) ve rastgele seçim yapar.
+
+> Not: Oyun verisinin kaynağı ve güncelliği, projede kullanılan veri kaynağına bağlıdır.
+
+## How it works (EN)
+The app fetches Steam game data from a source (e.g., Steam Store endpoints / a third-party catalog service / a local dataset) and then performs a random selection.
+
+> Note: Data coverage and freshness depend on the data source used in the project.
+
+---
+
+## Teknolojiler / Tech
+Repo dil dağılımı / Language breakdown:
+- TypeScript (%96.1)
+- CSS (%3.6)
+- JavaScript (%0.3)
+
+Framework/araçlar / Framework & tools (repo içeriğine göre netleştirilecek / to be confirmed from the repo):
+- (e.g., Next.js / React)
+- Deploy: Vercel
+
+---
+
+## Kurulum (Local) / Getting Started (Local)
+
+### Gereksinimler / Requirements
+- Node.js (LTS önerilir / LTS recommended)
+- npm / pnpm / yarn
+
+### Kurulum / Install
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
+git clone https://github.com/ali-novruz/steam-game-tool.git
+cd steam-game-tool
+npm install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Çalıştırma / Run
+```bash
+npm run dev
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Then open / Sonra aç:
+- http://localhost:3000
 
-## Learn More
+---
 
-To learn more, take a look at the following resources:
+## Ortam değişkenleri / Environment variables
+Eğer proje bir API key / endpoint kullanıyorsa `.env.local` gerekebilir.  
+If the project uses an API key / endpoint, you may need a `.env.local`.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-- [v0 Documentation](https://v0.app/docs) - learn about v0 and how to use it.
+Örnek / Example (isimleri repoya göre düzelt / adjust names based on the repo):
+```bash
+# .env.local
+# STEAM_API_KEY=
+# STEAM_API_BASE_URL=
+```
 
-<a href="https://v0.app/chat/api/kiro/clone/ali-novruz/steam-game-tool" alt="Open in Kiro"><img src="https://pdgvvgmkdvyeydso.public.blob.vercel-storage.com/open%20in%20kiro.svg?sanitize=true" /></a>
+---
+
+## Roadmap (Opsiyonel / Optional)
+- Filtreler / Filters: tür/etiket (genre/tags), fiyat aralığı (price range), Free-to-Play, inceleme skoru (review score), çıkış tarihi (release date)
+- Favorilere ekleme / geçmiş / Favorites & history
+- Paylaşılabilir sonuç linki / Shareable result link
+- TR/EN dil desteği / TR+EN language support
+
+---
+
+## Katkı / Contributing
+- Issue açabilirsin / Feel free to open an issue
+- Fork → branch (`feature/...`) → PR
+
+---
+
+## Lisans / License
+(Lisans eklemediysen: MIT önerilir.)  
+(If you haven’t added a license yet: MIT is recommended).
