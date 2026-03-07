@@ -1,5 +1,6 @@
 import type { Language } from "./types"
 
+// Turkish character support: ş, ğ, ü, ö, ı, ç, İ, Ş, Ğ, Ü, Ö, Ç
 export const translations: Record<Language, Record<string, string>> = {
   tr: {
     title: "Steam Oyun Ruleti",

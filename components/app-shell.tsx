@@ -249,7 +249,7 @@ export function AppShell() {
       <footer className="border-t py-6 text-center">
         <p className="text-xs text-muted-foreground">
           {lang === "tr"
-            ? "Steam Game Roulette - Valve Corporation ile baglantisi yoktur."
+            ? "Steam Game Roulette - Valve Corporation ile bağlantısı yoktur."
             : "Steam Game Roulette - Not affiliated with Valve Corporation."}
         </p>
       </footer>
