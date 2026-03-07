@@ -13,13 +13,50 @@ import type { GameData, Language } from "@/lib/types"
 import { t } from "@/lib/i18n"
 
 /* ------------------------------------------------------------------ */
-/*  Steam Icon                                                         */
+/*  Game Roulette Logo - Dice + Roulette inspired                      */
 /* ------------------------------------------------------------------ */
-function SteamLogo({ className }: { className?: string }) {
+function RouletteLogo({ className, size = "md" }: { className?: string; size?: "sm" | "md" | "lg" }) {
+  const sizes = {
+    sm: "size-7",
+    md: "size-10",
+    lg: "size-20 md:size-24",
+  }
   return (
-    <svg viewBox="0 0 24 24" className={className} fill="currentColor" aria-hidden="true">
-      <path d="M11.979 0C5.678 0 .511 4.86.022 11.037l6.432 2.658c.545-.371 1.203-.59 1.912-.59.063 0 .125.004.188.006l2.861-4.142V8.91c0-2.495 2.028-4.524 4.524-4.524 2.494 0 4.524 2.031 4.524 4.527s-2.03 4.525-4.524 4.525h-.105l-4.076 2.911c0 .052.004.105.004.159 0 1.875-1.515 3.396-3.39 3.396-1.635 0-3.016-1.173-3.331-2.727L.436 15.27C1.862 20.307 6.486 24 11.979 24c6.627 0 12.004-5.373 12.004-12S18.606 0 11.979 0" />
-    </svg>
+    <div className={`${sizes[size]} ${className} relative`}>
+      <svg viewBox="0 0 100 100" className="size-full" aria-hidden="true">
+        {/* Outer roulette wheel */}
+        <circle cx="50" cy="50" r="48" fill="none" stroke="currentColor" strokeWidth="3" className="text-primary" />
+        <circle cx="50" cy="50" r="42" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-primary/50" />
+        
+        {/* Roulette segments */}
+        {[0, 45, 90, 135, 180, 225, 270, 315].map((angle, i) => (
+          <line
+            key={angle}
+            x1="50"
+            y1="8"
+            x2="50"
+            y2="20"
+            stroke="currentColor"
+            strokeWidth="2"
+            className={i % 2 === 0 ? "text-primary" : "text-primary/60"}
+            transform={`rotate(${angle} 50 50)`}
+          />
+        ))}
+        
+        {/* Inner dice face */}
+        <rect x="28" y="28" width="44" height="44" rx="8" fill="currentColor" className="text-primary" />
+        
+        {/* Dice dots (showing 5 pattern) */}
+        <circle cx="38" cy="38" r="4" fill="currentColor" className="text-background" />
+        <circle cx="62" cy="38" r="4" fill="currentColor" className="text-background" />
+        <circle cx="50" cy="50" r="4" fill="currentColor" className="text-background" />
+        <circle cx="38" cy="62" r="4" fill="currentColor" className="text-background" />
+        <circle cx="62" cy="62" r="4" fill="currentColor" className="text-background" />
+        
+        {/* Spinning indicator at top */}
+        <polygon points="50,2 45,10 55,10" fill="currentColor" className="text-primary" />
+      </svg>
+    </div>
   )
 }
 
@@ -100,7 +137,7 @@ export function AppShell() {
       <header className="sticky top-0 z-50 border-b bg-background/80 backdrop-blur-md">
         <div className="mx-auto flex max-w-4xl items-center justify-between px-4 py-3">
           <div className="flex items-center gap-2">
-            <SteamLogo className="size-6 text-primary" />
+            <RouletteLogo size="sm" />
             <h1 className="text-sm font-bold md:text-base text-foreground">{t(lang, "title")}</h1>
           </div>
           <div className="flex items-center gap-2">
@@ -120,11 +157,11 @@ export function AppShell() {
         {/* ---- Hero (no game loaded, not loading, no error) ---- */}
         {!gameData && !loading && !error && (
           <section className="flex flex-col items-center gap-10 py-12 md:py-20">
-            {/* Glow orb + icon */}
+            {/* Glow orb + logo */}
             <div className="relative animate-fade-in-up">
               <div className="absolute -inset-8 rounded-full bg-primary/20 blur-2xl animate-pulse-ring" />
-              <div className="relative animate-float">
-                <SteamLogo className="size-20 text-primary md:size-24 drop-shadow-[0_0_24px_oklch(0.72_0.12_220/0.5)]" />
+              <div className="relative animate-float drop-shadow-[0_0_24px_oklch(0.72_0.12_220/0.5)]">
+                <RouletteLogo size="lg" />
               </div>
             </div>
 
