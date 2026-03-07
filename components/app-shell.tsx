@@ -12,67 +12,72 @@ import type { GameData, Language } from "@/lib/types"
 import { t } from "@/lib/i18n"
 
 /* ------------------------------------------------------------------ */
-/*  Spinning Wheel Logo                                                */
+/*  Spinning Wheel with Steam Logo                                     */
 /* ------------------------------------------------------------------ */
-const WHEEL_COLORS = [
-  "#1b9aaa", "#06d6a0", "#ef476f", "#ffd166", "#118ab2", "#073b4c", "#8338ec", "#ff006e"
-]
-
 function SpinnerLogo({ className, size = "md", spinning = false }: { className?: string; size?: "sm" | "md" | "lg"; spinning?: boolean }) {
   const sizes = {
     sm: "size-8",
     md: "size-12",
     lg: "size-32 md:size-40",
   }
-  const segments = 8
-  const anglePerSegment = 360 / segments
 
   return (
     <div className={`${sizes[size]} ${className} relative`}>
       <svg 
         viewBox="0 0 100 100" 
         className={`size-full transition-transform ${spinning ? "animate-spin-wheel" : ""}`}
-        style={{ animationDuration: spinning ? "3s" : "0s" }}
+        style={{ animationDuration: spinning ? "2.5s" : "0s" }}
         aria-hidden="true"
       >
+        {/* Outer mavi spinner ring */}
         <defs>
-          <clipPath id="wheelClip">
-            <circle cx="50" cy="50" r="48" />
-          </clipPath>
+          <linearGradient id="spinGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#0ea5e9" />
+            <stop offset="100%" stopColor="#0284c7" />
+          </linearGradient>
         </defs>
         
-        {/* Wheel segments */}
-        <g clipPath="url(#wheelClip)">
-          {Array.from({ length: segments }).map((_, i) => {
-            const startAngle = i * anglePerSegment - 90
-            const endAngle = startAngle + anglePerSegment
-            const startRad = (startAngle * Math.PI) / 180
-            const endRad = (endAngle * Math.PI) / 180
-            const x1 = 50 + 50 * Math.cos(startRad)
-            const y1 = 50 + 50 * Math.sin(startRad)
-            const x2 = 50 + 50 * Math.cos(endRad)
-            const y2 = 50 + 50 * Math.sin(endRad)
+        {/* Spinner segments - blue shades */}
+        <g>
+          {Array.from({ length: 12 }).map((_, i) => {
+            const angle = (i * 30) - 90
+            const radius = 45
+            const x = 50 + radius * Math.cos((angle * Math.PI) / 180)
+            const y = 50 + radius * Math.sin((angle * Math.PI) / 180)
+            const opacity = 0.3 + (i / 12) * 0.7
             return (
-              <path
+              <circle
                 key={i}
-                d={`M50,50 L${x1},${y1} A50,50 0 0,1 ${x2},${y2} Z`}
-                fill={WHEEL_COLORS[i % WHEEL_COLORS.length]}
+                cx={x}
+                cy={y}
+                r="3"
+                fill="url(#spinGrad)"
+                opacity={opacity}
               />
             )
           })}
         </g>
         
-        {/* Center circle */}
-        <circle cx="50" cy="50" r="12" fill="currentColor" className="text-background" />
-        <circle cx="50" cy="50" r="8" fill="currentColor" className="text-primary" />
+        {/* Outer blue ring */}
+        <circle cx="50" cy="50" r="46" fill="none" stroke="#0284c7" strokeWidth="2" opacity="0.6" />
         
-        {/* Outer ring */}
-        <circle cx="50" cy="50" r="48" fill="none" stroke="currentColor" strokeWidth="3" className="text-foreground/20" />
+        {/* Steam logo in center */}
+        <g transform="translate(28, 28) scale(0.44)">
+          {/* Steam icon - simplified */}
+          <path
+            d="M32 4C17.6 4 6 15.6 6 30c0 8.8 4.4 16.4 11.2 21.2L18 58c0 2.4 2 4 4.4 4h2l4-8h8l4 8h2c2.4 0 4-2 4-4l.8-6.8C51.6 46.4 56 39.2 56 30 56 15.6 44.4 4 30 4z"
+            fill="#0ea5e9"
+          />
+        </g>
+
+        {/* Center glow */}
+        <circle cx="50" cy="50" r="18" fill="none" stroke="#0ea5e9" strokeWidth="1" opacity="0.3" />
+        <circle cx="50" cy="50" r="14" fill="#f0f9ff" opacity="0.1" />
       </svg>
       
       {/* Pointer at top */}
-      <div className="absolute -top-1 left-1/2 -translate-x-1/2">
-        <svg viewBox="0 0 20 24" className="size-4 md:size-6 text-foreground drop-shadow-lg">
+      <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 z-10">
+        <svg viewBox="0 0 20 24" className="size-4 md:size-6 text-sky-500 drop-shadow-lg">
           <polygon points="10,24 0,8 10,0 20,8" fill="currentColor" />
         </svg>
       </div>
