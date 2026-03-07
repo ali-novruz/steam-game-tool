@@ -50,6 +50,11 @@ export const translations: Record<Language, Record<string, string>> = {
     statGames: "Oyun Havuzu",
     statGenres: "Farkli Tur",
     statFree: "Ucretsiz Oyun",
+    sysRequirements: "Sistem Gereksinimleri",
+    minimum: "Minimum",
+    recommended: "Onerilen",
+    canYouRunIt: "Bilgisayarim Calistirir mi?",
+    checkYourPC: "Sistemini kontrol et",
   },
   en: {
     title: "Steam Game Roulette",
@@ -100,6 +105,11 @@ export const translations: Record<Language, Record<string, string>> = {
     statGames: "Game Pool",
     statGenres: "Genres",
     statFree: "Free Games",
+    sysRequirements: "System Requirements",
+    minimum: "Minimum",
+    recommended: "Recommended",
+    canYouRunIt: "Can You Run It?",
+    checkYourPC: "Check your system",
   },
 }
 

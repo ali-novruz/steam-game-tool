@@ -17,10 +17,12 @@ import {
   Code2,
   Building2,
   Tag,
+  Cpu,
+  HardDrive,
 } from "lucide-react"
 import { ScoreBadge, ReviewBar } from "@/components/score-badge"
 import { MediaGallery } from "@/components/media-gallery"
-import type { GameData, Language } from "@/lib/types"
+import type { GameData, Language, SteamGame } from "@/lib/types"
 import { t } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
 
@@ -223,6 +225,11 @@ export function GameCard({ data, lang }: GameCardProps) {
           lang={lang}
         />
 
+        {/* System Requirements */}
+        {game.pc_requirements?.minimum && (
+          <SystemRequirements game={game} lang={lang} />
+        )}
+
         {/* Detailed description */}
         {detailedPlain && (
           <div className="flex flex-col gap-2">
@@ -270,6 +277,106 @@ function InfoRow({
         <span className="text-xs text-muted-foreground">{label}</span>
         <span className="text-foreground">{value}</span>
       </div>
+    </div>
+  )
+}
+
+/* ------------------------------------------------------------------ */
+/*  System Requirements Component                                      */
+/* ------------------------------------------------------------------ */
+function SystemRequirements({
+  game,
+  lang,
+}: {
+  game: SteamGame
+  lang: Language
+}) {
+  const [showReqs, setShowReqs] = useState(false)
+  const [activeTab, setActiveTab] = useState<"minimum" | "recommended">("minimum")
+
+  // Parse HTML from Steam requirements
+  function parseReqs(html: string): string {
+    return html
+      .replace(/<br\s*\/?>/gi, "\n")
+      .replace(/<[^>]*>/g, "")
+      .replace(/&nbsp;/g, " ")
+      .replace(/&amp;/g, "&")
+      .replace(/&lt;/g, "<")
+      .replace(/&gt;/g, ">")
+      .trim()
+  }
+
+  const pcMin = game.pc_requirements?.minimum ? parseReqs(game.pc_requirements.minimum) : ""
+  const pcRec = game.pc_requirements?.recommended ? parseReqs(game.pc_requirements.recommended) : ""
+
+  if (!pcMin && !pcRec) return null
+
+  // Generate Can You Run It link
+  const cyriUrl = `https://www.systemrequirementslab.com/cyri/requirements/${encodeURIComponent(
+    game.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "")
+  )}/any`
+
+  return (
+    <div className="flex flex-col gap-2">
+      <button
+        onClick={() => setShowReqs(!showReqs)}
+        className="flex items-center gap-1.5 text-sm font-medium text-primary hover:text-primary/80 transition-colors w-fit"
+      >
+        <Cpu className="size-4" />
+        {t(lang, "sysRequirements")}
+        {showReqs ? (
+          <ChevronUp className="size-4" />
+        ) : (
+          <ChevronDown className="size-4" />
+        )}
+      </button>
+
+      {showReqs && (
+        <div className="flex flex-col gap-3 rounded-lg border border-border bg-muted/30 p-4">
+          {/* Tabs */}
+          {pcRec && (
+            <div className="flex gap-2">
+              <Button
+                variant={activeTab === "minimum" ? "secondary" : "ghost"}
+                size="sm"
+                onClick={() => setActiveTab("minimum")}
+                className="text-xs"
+              >
+                <HardDrive className="size-3 mr-1" />
+                {t(lang, "minimum")}
+              </Button>
+              <Button
+                variant={activeTab === "recommended" ? "secondary" : "ghost"}
+                size="sm"
+                onClick={() => setActiveTab("recommended")}
+                className="text-xs"
+              >
+                <Cpu className="size-3 mr-1" />
+                {t(lang, "recommended")}
+              </Button>
+            </div>
+          )}
+
+          {/* Requirements text */}
+          <div className="text-xs text-muted-foreground whitespace-pre-line leading-relaxed max-h-48 overflow-y-auto">
+            {activeTab === "minimum" ? pcMin : pcRec || pcMin}
+          </div>
+
+          {/* Can You Run It link */}
+          <Button variant="outline" size="sm" asChild className="w-fit mt-2">
+            <a
+              href={cyriUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="gap-1.5"
+            >
+              <Monitor className="size-3.5" />
+              {t(lang, "canYouRunIt")}
+              <ExternalLink className="size-3" />
+            </a>
+          </Button>
+        </div>
+      )}
     </div>
   )
 }

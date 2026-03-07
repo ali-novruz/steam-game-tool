@@ -86,6 +86,9 @@ export async function GET() {
           background_raw: gameData.background_raw || "",
           capsule_image: gameData.capsule_image || "",
           capsule_imagev5: gameData.capsule_imagev5 || "",
+          pc_requirements: gameData.pc_requirements || null,
+          mac_requirements: gameData.mac_requirements || null,
+          linux_requirements: gameData.linux_requirements || null,
         },
         reviews,
       })

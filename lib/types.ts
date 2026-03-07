@@ -36,6 +36,9 @@ export interface SteamGame {
   background_raw: string
   capsule_image: string
   capsule_imagev5: string
+  pc_requirements?: { minimum?: string; recommended?: string } | null
+  mac_requirements?: { minimum?: string; recommended?: string } | null
+  linux_requirements?: { minimum?: string; recommended?: string } | null
 }
 
 export interface SteamReviewSummary {
