@@ -1,9 +1,10 @@
 "use client"
 
-import { useState, useCallback, useEffect, useRef } from "react"
+import { useState, useCallback, useEffect } from "react"
 import { useTheme } from "next-themes"
-import { Moon, Sun, AlertCircle, Search, RotateCw, Gamepad2, Share2 } from "lucide-react"
+import { Moon, Sun, AlertCircle, Search, Dices, Gamepad2, Share2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { GenerateButton } from "@/components/generate-button"
 import { LanguageSwitcher } from "@/components/language-switcher"
 import { GameCard } from "@/components/game-card"
 import { GameSkeleton } from "@/components/game-skeleton"
@@ -12,71 +13,13 @@ import type { GameData, Language } from "@/lib/types"
 import { t } from "@/lib/i18n"
 
 /* ------------------------------------------------------------------ */
-/*  Spinning Wheel with Steam Logo                                     */
+/*  Steam Icon                                                         */
 /* ------------------------------------------------------------------ */
-function SpinnerLogo({ className, size = "md", spinning = false }: { className?: string; size?: "sm" | "md" | "lg"; spinning?: boolean }) {
-  const sizes = {
-    sm: "size-8",
-    md: "size-12",
-    lg: "size-32 md:size-40",
-  }
-
+function SteamLogo({ className }: { className?: string }) {
   return (
-    <div className={`${sizes[size]} ${className} relative`}>
-      <svg 
-        viewBox="0 0 100 100" 
-        className={`size-full transition-transform ${spinning ? "animate-spin-wheel" : ""}`}
-        style={{ animationDuration: spinning ? "2.5s" : "0s" }}
-        aria-hidden="true"
-      >
-        {/* Gradients and defs */}
-        <defs>
-          <linearGradient id="spinGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#0ea5e9" />
-            <stop offset="100%" stopColor="#0284c7" />
-          </linearGradient>
-        </defs>
-        
-        {/* Spinner dots at 12 positions */}
-        <circle cx="50" cy="8" r="2.5" fill="#0ea5e9" opacity="1" />
-        <circle cx="75.9" cy="12.5" r="2.5" fill="#0ea5e9" opacity="0.9" />
-        <circle cx="91.4" cy="25.9" r="2.5" fill="#0ea5e9" opacity="0.8" />
-        <circle cx="97.5" cy="45" r="2.5" fill="#0ea5e9" opacity="0.7" />
-        <circle cx="91.4" cy="64.1" r="2.5" fill="#0ea5e9" opacity="0.6" />
-        <circle cx="75.9" cy="77.5" r="2.5" fill="#0ea5e9" opacity="0.5" />
-        <circle cx="50" cy="91.5" r="2.5" fill="#0ea5e9" opacity="0.5" />
-        <circle cx="24.1" cy="87.5" r="2.5" fill="#0ea5e9" opacity="0.6" />
-        <circle cx="8.6" cy="74.1" r="2.5" fill="#0ea5e9" opacity="0.7" />
-        <circle cx="2.5" cy="55" r="2.5" fill="#0ea5e9" opacity="0.8" />
-        <circle cx="8.6" cy="35.9" r="2.5" fill="#0ea5e9" opacity="0.9" />
-        <circle cx="24.1" cy="22.5" r="2.5" fill="#0ea5e9" opacity="1" />
-        
-        {/* Outer ring */}
-        <circle cx="50" cy="50" r="46" fill="none" stroke="#0284c7" strokeWidth="2" opacity="0.5" />
-        
-        {/* Steam logo center - simplified circle + pipes */}
-        <g>
-          {/* Center circle */}
-          <circle cx="50" cy="50" r="14" fill="none" stroke="#0ea5e9" strokeWidth="2" />
-          {/* Steam dot */}
-          <circle cx="50" cy="42" r="2.5" fill="#0ea5e9" />
-          {/* Pipe 1 */}
-          <path d="M48 56 Q45 62 42 65" fill="none" stroke="#0ea5e9" strokeWidth="2" strokeLinecap="round" />
-          {/* Pipe 2 */}
-          <path d="M52 56 Q55 62 58 65" fill="none" stroke="#0ea5e9" strokeWidth="2" strokeLinecap="round" />
-        </g>
-        
-        {/* Inner glow */}
-        <circle cx="50" cy="50" r="18" fill="none" stroke="#0ea5e9" strokeWidth="0.5" opacity="0.2" />
-      </svg>
-      
-      {/* Pointer at top */}
-      <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 z-10">
-        <svg viewBox="0 0 20 24" className="size-4 md:size-6 text-sky-500 drop-shadow-lg">
-          <polygon points="10,24 0,8 10,0 20,8" fill="currentColor" />
-        </svg>
-      </div>
-    </div>
+    <svg viewBox="0 0 24 24" className={className} fill="currentColor" aria-hidden="true">
+      <path d="M11.979 0C5.678 0 .511 4.86.022 11.037l6.432 2.658c.545-.371 1.203-.59 1.912-.59.063 0 .125.004.188.006l2.861-4.142V8.91c0-2.495 2.028-4.524 4.524-4.524 2.494 0 4.524 2.031 4.524 4.527s-2.03 4.525-4.524 4.525h-.105l-4.076 2.911c0 .052.004.105.004.159 0 1.875-1.515 3.396-3.39 3.396-1.635 0-3.016-1.173-3.331-2.727L.436 15.27C1.862 20.307 6.486 24 11.979 24c6.627 0 12.004-5.373 12.004-12S18.606 0 11.979 0" />
+    </svg>
   )
 }
 
@@ -96,38 +39,6 @@ function FeatureCard({ icon, title, desc }: { icon: React.ReactNode; title: stri
 }
 
 /* ------------------------------------------------------------------ */
-/*  Spin Button with wheel animation                                   */
-/* ------------------------------------------------------------------ */
-function SpinButton({ 
-  onClick, 
-  loading, 
-  hasGame, 
-  lang 
-}: { 
-  onClick: () => void
-  loading: boolean
-  hasGame: boolean
-  lang: Language 
-}) {
-  return (
-    <Button
-      size="lg"
-      onClick={onClick}
-      disabled={loading}
-      className="gap-2 px-8 py-6 text-lg font-bold shadow-lg hover:shadow-xl transition-all"
-    >
-      <RotateCw className={`size-5 ${loading ? "animate-spin" : ""}`} />
-      {loading 
-        ? t(lang, "discovering") 
-        : hasGame 
-          ? t(lang, "newGame") 
-          : t(lang, "spinWheel")
-      }
-    </Button>
-  )
-}
-
-/* ------------------------------------------------------------------ */
 /*  Main Shell                                                         */
 /* ------------------------------------------------------------------ */
 export function AppShell() {
@@ -138,26 +49,17 @@ export function AppShell() {
   const [mounted, setMounted] = useState(false)
   const [searchId, setSearchId] = useState("")
   const [searchError, setSearchError] = useState(false)
-  const [spinning, setSpinning] = useState(false)
   const { setTheme, resolvedTheme } = useTheme()
 
   useEffect(() => { setMounted(true) }, [])
 
-  /* Random game with spin animation */
+  /* Random game */
   const fetchRandomGame = useCallback(async () => {
-    setSpinning(true)
     setLoading(true)
     setError(false)
     setSearchError(false)
-    
-    // Start fetch but wait for spin animation
-    const fetchPromise = fetch("/api/steam/random")
-    
-    // Wait at least 2.5 seconds for spin animation
-    await new Promise(resolve => setTimeout(resolve, 2500))
-    
     try {
-      const res = await fetchPromise
+      const res = await fetch("/api/steam/random")
       if (!res.ok) throw new Error("Failed")
       const data = await res.json()
       if (data.error) throw new Error(data.error)
@@ -165,7 +67,6 @@ export function AppShell() {
     } catch {
       setError(true)
     } finally {
-      setSpinning(false)
       setLoading(false)
     }
   }, [])
@@ -199,7 +100,7 @@ export function AppShell() {
       <header className="sticky top-0 z-50 border-b bg-background/80 backdrop-blur-md">
         <div className="mx-auto flex max-w-4xl items-center justify-between px-4 py-3">
           <div className="flex items-center gap-2">
-            <SpinnerLogo size="sm" />
+            <SteamLogo className="size-6 text-primary" />
             <h1 className="text-sm font-bold md:text-base text-foreground">{t(lang, "title")}</h1>
           </div>
           <div className="flex items-center gap-2">
@@ -219,11 +120,11 @@ export function AppShell() {
         {/* ---- Hero (no game loaded, not loading, no error) ---- */}
         {!gameData && !loading && !error && (
           <section className="flex flex-col items-center gap-10 py-12 md:py-20">
-            {/* Spinning Wheel */}
+            {/* Glow orb + icon */}
             <div className="relative animate-fade-in-up">
-              <div className="absolute -inset-12 rounded-full bg-primary/20 blur-3xl animate-pulse-ring" />
-              <div className="relative drop-shadow-[0_0_32px_rgba(0,0,0,0.3)]">
-                <SpinnerLogo size="lg" spinning={spinning} />
+              <div className="absolute -inset-8 rounded-full bg-primary/20 blur-2xl animate-pulse-ring" />
+              <div className="relative animate-float">
+                <SteamLogo className="size-20 text-primary md:size-24 drop-shadow-[0_0_24px_oklch(0.72_0.12_220/0.5)]" />
               </div>
             </div>
 
@@ -239,11 +140,13 @@ export function AppShell() {
 
             {/* CTA */}
             <div className="flex flex-col items-center gap-4 animate-fade-in-up" style={{ animationDelay: "200ms" }}>
-              <SpinButton
+              <GenerateButton
                 onClick={fetchRandomGame}
                 loading={loading}
                 hasGame={false}
-                lang={lang}
+                discoverLabel={t(lang, "rollDice")}
+                loadingLabel={t(lang, "discovering")}
+                newGameLabel={t(lang, "newGame")}
               />
 
               <span className="text-xs text-muted-foreground">{t(lang, "orText")}</span>
@@ -269,7 +172,7 @@ export function AppShell() {
 
             {/* Feature cards */}
             <div className="grid w-full max-w-lg grid-cols-3 gap-3 animate-fade-in-up" style={{ animationDelay: "350ms" }}>
-              <FeatureCard icon={<RotateCw className="size-5" />} title={t(lang, "spinWheel")} desc={lang === "tr" ? "Tek tıkla rastgele oyun" : "One click, random game"} />
+              <FeatureCard icon={<Dices className="size-5" />} title={t(lang, "rollDice")} desc={lang === "tr" ? "Tek tıkla rastgele oyun" : "One click, random game"} />
               <FeatureCard icon={<Gamepad2 className="size-5" />} title={lang === "tr" ? "Detaylı Bilgi" : "Full Details"} desc={lang === "tr" ? "Fiyat, puan, fragman" : "Price, scores, trailers"} />
               <FeatureCard icon={<Share2 className="size-5" />} title={t(lang, "share")} desc={lang === "tr" ? "Sosyal medya kartları" : "Social media cards"} />
             </div>
@@ -302,16 +205,13 @@ export function AppShell() {
           </section>
         )}
 
-        {/* ---- Loading with spinning wheel ---- */}
+        {/* ---- Loading ---- */}
         {loading && (
-          <section className="flex flex-col items-center gap-8 py-12">
-            <div className="relative">
-              <div className="absolute -inset-12 rounded-full bg-primary/20 blur-3xl animate-pulse-ring" />
-              <SpinnerLogo size="lg" spinning={spinning} />
+          <section className="flex flex-col gap-6">
+            <div className="flex justify-center">
+              <GenerateButton onClick={fetchRandomGame} loading={loading} hasGame={true} discoverLabel={t(lang, "rollDice")} loadingLabel={t(lang, "discovering")} newGameLabel={t(lang, "newGame")} />
             </div>
-            <p className="text-lg font-medium text-muted-foreground animate-pulse">
-              {t(lang, "discovering")}
-            </p>
+            <GameSkeleton />
           </section>
         )}
 
@@ -320,7 +220,7 @@ export function AppShell() {
           <section className="flex flex-col gap-6">
             {/* Controls row */}
             <div className="flex flex-col items-center gap-3">
-              <SpinButton onClick={fetchRandomGame} loading={loading} hasGame={true} lang={lang} />
+              <GenerateButton onClick={fetchRandomGame} loading={loading} hasGame={true} discoverLabel={t(lang, "rollDice")} loadingLabel={t(lang, "discovering")} newGameLabel={t(lang, "newGame")} />
               <div className="flex w-full max-w-sm items-center gap-2">
                 <input
                   type="text"

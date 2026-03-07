@@ -172,12 +172,6 @@
   to { opacity: 1; transform: translateY(0); }
 }
 
-@keyframes spin-wheel {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(1440deg); }
-}
-
 .animate-float { animation: float 5s ease-in-out infinite; }
 .animate-pulse-ring { animation: pulse-ring 3s ease-in-out infinite; }
 .animate-fade-in-up { animation: fade-in-up 0.5s ease-out both; }
-.animate-spin-wheel { animation: spin-wheel 2.5s cubic-bezier(0.25, 0.1, 0.25, 1) forwards; }
