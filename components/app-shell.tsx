@@ -1,10 +1,9 @@
 "use client"
 
-import { useState, useCallback, useEffect } from "react"
+import { useState, useCallback, useEffect, useRef } from "react"
 import { useTheme } from "next-themes"
-import { Moon, Sun, AlertCircle, Search, Dices, Gamepad2, Share2 } from "lucide-react"
+import { Moon, Sun, AlertCircle, Search, RotateCw, Gamepad2, Share2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { GenerateButton } from "@/components/generate-button"
 import { LanguageSwitcher } from "@/components/language-switcher"
 import { GameCard } from "@/components/game-card"
 import { GameSkeleton } from "@/components/game-skeleton"
@@ -13,34 +12,70 @@ import type { GameData, Language } from "@/lib/types"
 import { t } from "@/lib/i18n"
 
 /* ------------------------------------------------------------------ */
-/*  Game Roulette Logo - Simple dice design                            */
+/*  Spinning Wheel Logo                                                */
 /* ------------------------------------------------------------------ */
-function RouletteLogo({ className, size = "md" }: { className?: string; size?: "sm" | "md" | "lg" }) {
+const WHEEL_COLORS = [
+  "#1b9aaa", "#06d6a0", "#ef476f", "#ffd166", "#118ab2", "#073b4c", "#8338ec", "#ff006e"
+]
+
+function SpinnerLogo({ className, size = "md", spinning = false }: { className?: string; size?: "sm" | "md" | "lg"; spinning?: boolean }) {
   const sizes = {
-    sm: "size-7",
-    md: "size-10",
-    lg: "size-16 md:size-20",
+    sm: "size-8",
+    md: "size-12",
+    lg: "size-32 md:size-40",
   }
+  const segments = 8
+  const anglePerSegment = 360 / segments
+
   return (
-    <div className={`${sizes[size]} ${className}`}>
-      <svg viewBox="0 0 48 48" className="size-full" aria-hidden="true">
-        {/* Dice body with gradient */}
+    <div className={`${sizes[size]} ${className} relative`}>
+      <svg 
+        viewBox="0 0 100 100" 
+        className={`size-full transition-transform ${spinning ? "animate-spin-wheel" : ""}`}
+        style={{ animationDuration: spinning ? "3s" : "0s" }}
+        aria-hidden="true"
+      >
         <defs>
-          <linearGradient id="diceGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="currentColor" className="text-primary" />
-            <stop offset="100%" stopColor="currentColor" className="text-primary/70" />
-          </linearGradient>
+          <clipPath id="wheelClip">
+            <circle cx="50" cy="50" r="48" />
+          </clipPath>
         </defs>
-        <rect x="4" y="4" width="40" height="40" rx="8" fill="url(#diceGrad)" />
         
-        {/* Dice dots - 6 pattern */}
-        <circle cx="14" cy="14" r="3.5" fill="currentColor" className="text-background" />
-        <circle cx="14" cy="24" r="3.5" fill="currentColor" className="text-background" />
-        <circle cx="14" cy="34" r="3.5" fill="currentColor" className="text-background" />
-        <circle cx="34" cy="14" r="3.5" fill="currentColor" className="text-background" />
-        <circle cx="34" cy="24" r="3.5" fill="currentColor" className="text-background" />
-        <circle cx="34" cy="34" r="3.5" fill="currentColor" className="text-background" />
+        {/* Wheel segments */}
+        <g clipPath="url(#wheelClip)">
+          {Array.from({ length: segments }).map((_, i) => {
+            const startAngle = i * anglePerSegment - 90
+            const endAngle = startAngle + anglePerSegment
+            const startRad = (startAngle * Math.PI) / 180
+            const endRad = (endAngle * Math.PI) / 180
+            const x1 = 50 + 50 * Math.cos(startRad)
+            const y1 = 50 + 50 * Math.sin(startRad)
+            const x2 = 50 + 50 * Math.cos(endRad)
+            const y2 = 50 + 50 * Math.sin(endRad)
+            return (
+              <path
+                key={i}
+                d={`M50,50 L${x1},${y1} A50,50 0 0,1 ${x2},${y2} Z`}
+                fill={WHEEL_COLORS[i % WHEEL_COLORS.length]}
+              />
+            )
+          })}
+        </g>
+        
+        {/* Center circle */}
+        <circle cx="50" cy="50" r="12" fill="currentColor" className="text-background" />
+        <circle cx="50" cy="50" r="8" fill="currentColor" className="text-primary" />
+        
+        {/* Outer ring */}
+        <circle cx="50" cy="50" r="48" fill="none" stroke="currentColor" strokeWidth="3" className="text-foreground/20" />
       </svg>
+      
+      {/* Pointer at top */}
+      <div className="absolute -top-1 left-1/2 -translate-x-1/2">
+        <svg viewBox="0 0 20 24" className="size-4 md:size-6 text-foreground drop-shadow-lg">
+          <polygon points="10,24 0,8 10,0 20,8" fill="currentColor" />
+        </svg>
+      </div>
     </div>
   )
 }
@@ -61,6 +96,38 @@ function FeatureCard({ icon, title, desc }: { icon: React.ReactNode; title: stri
 }
 
 /* ------------------------------------------------------------------ */
+/*  Spin Button with wheel animation                                   */
+/* ------------------------------------------------------------------ */
+function SpinButton({ 
+  onClick, 
+  loading, 
+  hasGame, 
+  lang 
+}: { 
+  onClick: () => void
+  loading: boolean
+  hasGame: boolean
+  lang: Language 
+}) {
+  return (
+    <Button
+      size="lg"
+      onClick={onClick}
+      disabled={loading}
+      className="gap-2 px-8 py-6 text-lg font-bold shadow-lg hover:shadow-xl transition-all"
+    >
+      <RotateCw className={`size-5 ${loading ? "animate-spin" : ""}`} />
+      {loading 
+        ? t(lang, "discovering") 
+        : hasGame 
+          ? t(lang, "newGame") 
+          : t(lang, "spinWheel")
+      }
+    </Button>
+  )
+}
+
+/* ------------------------------------------------------------------ */
 /*  Main Shell                                                         */
 /* ------------------------------------------------------------------ */
 export function AppShell() {
@@ -71,17 +138,26 @@ export function AppShell() {
   const [mounted, setMounted] = useState(false)
   const [searchId, setSearchId] = useState("")
   const [searchError, setSearchError] = useState(false)
+  const [spinning, setSpinning] = useState(false)
   const { setTheme, resolvedTheme } = useTheme()
 
   useEffect(() => { setMounted(true) }, [])
 
-  /* Random game */
+  /* Random game with spin animation */
   const fetchRandomGame = useCallback(async () => {
+    setSpinning(true)
     setLoading(true)
     setError(false)
     setSearchError(false)
+    
+    // Start fetch but wait for spin animation
+    const fetchPromise = fetch("/api/steam/random")
+    
+    // Wait at least 2.5 seconds for spin animation
+    await new Promise(resolve => setTimeout(resolve, 2500))
+    
     try {
-      const res = await fetch("/api/steam/random")
+      const res = await fetchPromise
       if (!res.ok) throw new Error("Failed")
       const data = await res.json()
       if (data.error) throw new Error(data.error)
@@ -89,6 +165,7 @@ export function AppShell() {
     } catch {
       setError(true)
     } finally {
+      setSpinning(false)
       setLoading(false)
     }
   }, [])
@@ -122,7 +199,7 @@ export function AppShell() {
       <header className="sticky top-0 z-50 border-b bg-background/80 backdrop-blur-md">
         <div className="mx-auto flex max-w-4xl items-center justify-between px-4 py-3">
           <div className="flex items-center gap-2">
-            <RouletteLogo size="sm" />
+            <SpinnerLogo size="sm" />
             <h1 className="text-sm font-bold md:text-base text-foreground">{t(lang, "title")}</h1>
           </div>
           <div className="flex items-center gap-2">
@@ -142,11 +219,11 @@ export function AppShell() {
         {/* ---- Hero (no game loaded, not loading, no error) ---- */}
         {!gameData && !loading && !error && (
           <section className="flex flex-col items-center gap-10 py-12 md:py-20">
-            {/* Glow orb + logo */}
+            {/* Spinning Wheel */}
             <div className="relative animate-fade-in-up">
-              <div className="absolute -inset-8 rounded-full bg-primary/20 blur-2xl animate-pulse-ring" />
-              <div className="relative animate-float drop-shadow-[0_0_24px_oklch(0.72_0.12_220/0.5)]">
-                <RouletteLogo size="lg" />
+              <div className="absolute -inset-12 rounded-full bg-primary/20 blur-3xl animate-pulse-ring" />
+              <div className="relative drop-shadow-[0_0_32px_rgba(0,0,0,0.3)]">
+                <SpinnerLogo size="lg" spinning={spinning} />
               </div>
             </div>
 
@@ -162,13 +239,11 @@ export function AppShell() {
 
             {/* CTA */}
             <div className="flex flex-col items-center gap-4 animate-fade-in-up" style={{ animationDelay: "200ms" }}>
-              <GenerateButton
+              <SpinButton
                 onClick={fetchRandomGame}
                 loading={loading}
                 hasGame={false}
-                discoverLabel={t(lang, "rollDice")}
-                loadingLabel={t(lang, "discovering")}
-                newGameLabel={t(lang, "newGame")}
+                lang={lang}
               />
 
               <span className="text-xs text-muted-foreground">{t(lang, "orText")}</span>
@@ -194,7 +269,7 @@ export function AppShell() {
 
             {/* Feature cards */}
             <div className="grid w-full max-w-lg grid-cols-3 gap-3 animate-fade-in-up" style={{ animationDelay: "350ms" }}>
-              <FeatureCard icon={<Dices className="size-5" />} title={t(lang, "rollDice")} desc={lang === "tr" ? "Tek tıkla rastgele oyun" : "One click, random game"} />
+              <FeatureCard icon={<RotateCw className="size-5" />} title={t(lang, "spinWheel")} desc={lang === "tr" ? "Tek tıkla rastgele oyun" : "One click, random game"} />
               <FeatureCard icon={<Gamepad2 className="size-5" />} title={lang === "tr" ? "Detaylı Bilgi" : "Full Details"} desc={lang === "tr" ? "Fiyat, puan, fragman" : "Price, scores, trailers"} />
               <FeatureCard icon={<Share2 className="size-5" />} title={t(lang, "share")} desc={lang === "tr" ? "Sosyal medya kartları" : "Social media cards"} />
             </div>
@@ -227,13 +302,16 @@ export function AppShell() {
           </section>
         )}
 
-        {/* ---- Loading ---- */}
+        {/* ---- Loading with spinning wheel ---- */}
         {loading && (
-          <section className="flex flex-col gap-6">
-            <div className="flex justify-center">
-              <GenerateButton onClick={fetchRandomGame} loading={loading} hasGame={true} discoverLabel={t(lang, "rollDice")} loadingLabel={t(lang, "discovering")} newGameLabel={t(lang, "newGame")} />
+          <section className="flex flex-col items-center gap-8 py-12">
+            <div className="relative">
+              <div className="absolute -inset-12 rounded-full bg-primary/20 blur-3xl animate-pulse-ring" />
+              <SpinnerLogo size="lg" spinning={spinning} />
             </div>
-            <GameSkeleton />
+            <p className="text-lg font-medium text-muted-foreground animate-pulse">
+              {t(lang, "discovering")}
+            </p>
           </section>
         )}
 
@@ -242,7 +320,7 @@ export function AppShell() {
           <section className="flex flex-col gap-6">
             {/* Controls row */}
             <div className="flex flex-col items-center gap-3">
-              <GenerateButton onClick={fetchRandomGame} loading={loading} hasGame={true} discoverLabel={t(lang, "rollDice")} loadingLabel={t(lang, "discovering")} newGameLabel={t(lang, "newGame")} />
+              <SpinButton onClick={fetchRandomGame} loading={loading} hasGame={true} lang={lang} />
               <div className="flex w-full max-w-sm items-center gap-2">
                 <input
                   type="text"
