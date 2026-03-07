@@ -29,7 +29,7 @@ function SpinnerLogo({ className, size = "md", spinning = false }: { className?:
         style={{ animationDuration: spinning ? "2.5s" : "0s" }}
         aria-hidden="true"
       >
-        {/* Outer mavi spinner ring */}
+        {/* Gradients and defs */}
         <defs>
           <linearGradient id="spinGrad" x1="0%" y1="0%" x2="100%" y2="100%">
             <stop offset="0%" stopColor="#0ea5e9" />
@@ -37,42 +37,37 @@ function SpinnerLogo({ className, size = "md", spinning = false }: { className?:
           </linearGradient>
         </defs>
         
-        {/* Spinner segments - blue shades */}
+        {/* Spinner dots at 12 positions */}
+        <circle cx="50" cy="8" r="2.5" fill="#0ea5e9" opacity="1" />
+        <circle cx="75.9" cy="12.5" r="2.5" fill="#0ea5e9" opacity="0.9" />
+        <circle cx="91.4" cy="25.9" r="2.5" fill="#0ea5e9" opacity="0.8" />
+        <circle cx="97.5" cy="45" r="2.5" fill="#0ea5e9" opacity="0.7" />
+        <circle cx="91.4" cy="64.1" r="2.5" fill="#0ea5e9" opacity="0.6" />
+        <circle cx="75.9" cy="77.5" r="2.5" fill="#0ea5e9" opacity="0.5" />
+        <circle cx="50" cy="91.5" r="2.5" fill="#0ea5e9" opacity="0.5" />
+        <circle cx="24.1" cy="87.5" r="2.5" fill="#0ea5e9" opacity="0.6" />
+        <circle cx="8.6" cy="74.1" r="2.5" fill="#0ea5e9" opacity="0.7" />
+        <circle cx="2.5" cy="55" r="2.5" fill="#0ea5e9" opacity="0.8" />
+        <circle cx="8.6" cy="35.9" r="2.5" fill="#0ea5e9" opacity="0.9" />
+        <circle cx="24.1" cy="22.5" r="2.5" fill="#0ea5e9" opacity="1" />
+        
+        {/* Outer ring */}
+        <circle cx="50" cy="50" r="46" fill="none" stroke="#0284c7" strokeWidth="2" opacity="0.5" />
+        
+        {/* Steam logo center - simplified circle + pipes */}
         <g>
-          {Array.from({ length: 12 }).map((_, i) => {
-            const angle = (i * 30) - 90
-            const radius = 45
-            const x = 50 + radius * Math.cos((angle * Math.PI) / 180)
-            const y = 50 + radius * Math.sin((angle * Math.PI) / 180)
-            const opacity = 0.3 + (i / 12) * 0.7
-            return (
-              <circle
-                key={i}
-                cx={x}
-                cy={y}
-                r="3"
-                fill="url(#spinGrad)"
-                opacity={opacity}
-              />
-            )
-          })}
+          {/* Center circle */}
+          <circle cx="50" cy="50" r="14" fill="none" stroke="#0ea5e9" strokeWidth="2" />
+          {/* Steam dot */}
+          <circle cx="50" cy="42" r="2.5" fill="#0ea5e9" />
+          {/* Pipe 1 */}
+          <path d="M48 56 Q45 62 42 65" fill="none" stroke="#0ea5e9" strokeWidth="2" strokeLinecap="round" />
+          {/* Pipe 2 */}
+          <path d="M52 56 Q55 62 58 65" fill="none" stroke="#0ea5e9" strokeWidth="2" strokeLinecap="round" />
         </g>
         
-        {/* Outer blue ring */}
-        <circle cx="50" cy="50" r="46" fill="none" stroke="#0284c7" strokeWidth="2" opacity="0.6" />
-        
-        {/* Steam logo in center */}
-        <g transform="translate(28, 28) scale(0.44)">
-          {/* Steam icon - simplified */}
-          <path
-            d="M32 4C17.6 4 6 15.6 6 30c0 8.8 4.4 16.4 11.2 21.2L18 58c0 2.4 2 4 4.4 4h2l4-8h8l4 8h2c2.4 0 4-2 4-4l.8-6.8C51.6 46.4 56 39.2 56 30 56 15.6 44.4 4 30 4z"
-            fill="#0ea5e9"
-          />
-        </g>
-
-        {/* Center glow */}
-        <circle cx="50" cy="50" r="18" fill="none" stroke="#0ea5e9" strokeWidth="1" opacity="0.3" />
-        <circle cx="50" cy="50" r="14" fill="#f0f9ff" opacity="0.1" />
+        {/* Inner glow */}
+        <circle cx="50" cy="50" r="18" fill="none" stroke="#0ea5e9" strokeWidth="0.5" opacity="0.2" />
       </svg>
       
       {/* Pointer at top */}
