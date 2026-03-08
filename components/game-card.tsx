@@ -175,12 +175,19 @@ export function GameCard({ data, lang }: GameCardProps) {
 
           {/* Right Column: Scores */}
           <div className="flex flex-col gap-4">
-            <div className="flex items-start gap-6 justify-center md:justify-start">
+            <div className="flex items-start gap-6 justify-center md:justify-start flex-wrap">
               {game.metacritic && (
                 <ScoreBadge
                   score={game.metacritic.score}
                   type="metacritic"
-                  label={game.metacritic.source === "opencritic" ? "OpenCritic" : t(lang, "metacritic")}
+                  label={t(lang, "metacritic")}
+                />
+              )}
+              {game.opencritic && (
+                <ScoreBadge
+                  score={game.opencritic.score}
+                  type="opencritic"
+                  label="OpenCritic"
                 />
               )}
               {reviews.review_score > 0 && (

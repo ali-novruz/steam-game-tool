@@ -3,7 +3,7 @@ import { NextRequest } from "next/server"
 import { getRandomGameId } from "@/lib/steam-games"
 import type { GameFilters } from "@/lib/types"
 
-const MAX_RETRIES = 25
+const MAX_RETRIES = 50
 
 // Parse filters from URL search params
 function parseFilters(searchParams: URLSearchParams): Partial<GameFilters> {
@@ -71,13 +71,57 @@ function matchesFilters(gameData: Record<string, unknown>, reviewData: Record<st
     if (filters.priceMax && priceDollars > filters.priceMax) return false
   }
   
-  // Genres
+  // Genres - Check Steam's official genre IDs
+  // Steam API only returns limited genre info, so we only filter on main genres
+  // Main genre IDs: 1=Action, 2=Strategy, 3=RPG, 4=Casual, 9=Racing, 18=Sports, 
+  // 23=Indie, 25=Adventure, 28=Simulation, 29=MMO, 37=Free to Play, 70=Early Access
+  const mainGenreIds = new Set(["1", "2", "3", "4", "9", "18", "23", "25", "28", "29", "37", "70"])
+  
   if (filters.genres && filters.genres.length > 0) {
-    const gameGenres = (gameData.genres as { id: string }[]) || []
+    const gameGenres = (gameData.genres as { id: string; description: string }[]) || []
     const gameGenreIds = gameGenres.map(g => g.id)
-    if (!filters.genres.some(g => gameGenreIds.includes(g))) {
-      return false
+    const genreDescriptions = gameGenres.map(g => g.description.toLowerCase())
+    
+    // Only filter on main genres that Steam API actually returns
+    const mainGenreFilters = filters.genres.filter(id => mainGenreIds.has(id))
+    
+    if (mainGenreFilters.length > 0) {
+      // Check for direct ID match
+      const hasDirectMatch = mainGenreFilters.some(tagId => gameGenreIds.includes(tagId))
+      
+      if (!hasDirectMatch) {
+        // Fallback: Text-based matching
+        const genreTextMappings: Record<string, string[]> = {
+          "1": ["action"],
+          "25": ["adventure"],
+          "3": ["rpg", "role-playing"],
+          "2": ["strategy"],
+          "28": ["simulation"],
+          "4": ["casual"],
+          "23": ["indie"],
+          "18": ["sports"],
+          "9": ["racing"],
+          "37": ["free to play", "free"],
+          "70": ["early access"],
+          "29": ["massively multiplayer", "mmo"],
+        }
+        
+        const hasTextMatch = mainGenreFilters.some(tagId => {
+          const mappedTerms = genreTextMappings[tagId]
+          if (mappedTerms) {
+            return mappedTerms.some(term => 
+              genreDescriptions.some(desc => desc.includes(term))
+            )
+          }
+          return false
+        })
+        
+        if (!hasTextMatch) {
+          return false
+        }
+      }
     }
+    // Non-main genre filters (themes, subgenres, etc.) are ignored since Steam API doesn't provide this data
   }
   
   // Platforms
@@ -205,6 +249,36 @@ export async function GET(request: NextRequest) {
       }
 
       const metacritic = gameData.metacritic || null
+      
+      // Try to fetch OpenCritic score if Metacritic is not available
+      let opencritic = null
+      if (!metacritic) {
+        try {
+          // Search for game on OpenCritic
+          const searchRes = await fetch(
+            `https://api.opencritic.com/api/game/search?criteria=${encodeURIComponent(gameData.name)}`,
+            { 
+              headers: { 'User-Agent': 'Mozilla/5.0' },
+              next: { revalidate: 3600 } // Cache for 1 hour
+            }
+          )
+          if (searchRes.ok) {
+            const searchData = await searchRes.json()
+            if (searchData && searchData.length > 0) {
+              const gameMatch = searchData[0]
+              if (gameMatch.topCriticScore && gameMatch.topCriticScore > 0) {
+                opencritic = {
+                  score: Math.round(gameMatch.topCriticScore),
+                  url: `https://opencritic.com/game/${gameMatch.id}/${gameMatch.name?.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`,
+                  tier: gameMatch.tier || null
+                }
+              }
+            }
+          }
+        } catch {
+          // OpenCritic fetch failed, continue without it
+        }
+      }
 
       return NextResponse.json({
         game: {
@@ -226,6 +300,7 @@ export async function GET(request: NextRequest) {
             date: "Unknown",
           },
           metacritic,
+          opencritic,
           recommendations: gameData.recommendations || null,
           price_overview: gameData.price_overview || null,
           is_free: gameData.is_free || false,

@@ -45,26 +45,33 @@ export function FilterPanel({ filters, onChange, onReset, lang }: FilterPanelPro
   const [activeSection, setActiveSection] = useState<string | null>(null)
   const [tagSearch, setTagSearch] = useState("")
 
-  // Sort tags alphabetically based on language and filter by search
-  const sortedAndFilteredTags = useMemo(() => {
+  // Filter and sort main genre tags only (Steam API only supports filtering on main genres)
+  const mainGenreTags = useMemo(() => {
     const collator = lang === "tr" ? turkishCollator : englishCollator
+    const searchLower = tagSearch.toLowerCase().trim()
     
-    // First sort alphabetically by language
-    const sorted = [...STEAM_TAGS].sort((a, b) => {
+    // Only include "genre" category tags - these are the only ones Steam API can filter
+    let filtered = STEAM_TAGS.filter(tag => tag.category === "genre")
+    
+    // Filter by search term
+    if (searchLower) {
+      filtered = filtered.filter(tag => {
+        const name = lang === "tr" ? tag.nameTr : tag.name
+        return name.toLowerCase().includes(searchLower)
+      })
+    }
+    
+    // Sort alphabetically
+    filtered.sort((a, b) => {
       const nameA = lang === "tr" ? a.nameTr : a.name
       const nameB = lang === "tr" ? b.nameTr : b.name
       return collator.compare(nameA, nameB)
     })
     
-    // Then filter by search term
-    if (!tagSearch.trim()) return sorted
-    
-    const searchLower = tagSearch.toLowerCase()
-    return sorted.filter(tag => {
-      const name = lang === "tr" ? tag.nameTr : tag.name
-      return name.toLowerCase().includes(searchLower)
-    })
+    return filtered
   }, [lang, tagSearch])
+  
+
 
   const toggleSection = (section: string) => {
     setActiveSection(activeSection === section ? null : section)
@@ -79,13 +86,6 @@ export function FilterPanel({ filters, onChange, onReset, lang }: FilterPanelPro
       ? filters.genres.filter(g => g !== genreId)
       : [...filters.genres, genreId]
     updateFilter("genres", newGenres)
-  }
-
-  const toggleCategory = (catId: string) => {
-    const newCats = filters.categories.includes(catId)
-      ? filters.categories.filter(c => c !== catId)
-      : [...filters.categories, catId]
-    updateFilter("categories", newCats)
   }
 
   const activeFilterCount = countActiveFilters(filters)
@@ -296,9 +296,9 @@ export function FilterPanel({ filters, onChange, onReset, lang }: FilterPanelPro
                   </p>
                 )}
                 
-                {/* Tags list */}
+                {/* Main genre tags only - Steam API limitation */}
                 <div className="flex flex-wrap gap-1.5 max-h-60 overflow-y-auto pr-1">
-                  {sortedAndFilteredTags.map(tag => (
+                  {mainGenreTags.map(tag => (
                     <ToggleChip
                       key={tag.id}
                       active={filters.genres.includes(tag.id)}
@@ -306,9 +306,9 @@ export function FilterPanel({ filters, onChange, onReset, lang }: FilterPanelPro
                       label={lang === "tr" ? tag.nameTr : tag.name}
                     />
                   ))}
-                  {sortedAndFilteredTags.length === 0 && (
+                  {mainGenreTags.length === 0 && (
                     <p className="text-xs text-muted-foreground py-2">
-                      {lang === "tr" ? "Sonuç bulunamadı" : "No results found"}
+                      {lang === "tr" ? "Sonuc bulunamadi" : "No results found"}
                     </p>
                   )}
                 </div>
