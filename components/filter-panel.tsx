@@ -22,7 +22,7 @@ import {
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import type { GameFilters, Language } from "@/lib/types"
-import { DEFAULT_FILTERS, STEAM_GENRES, STEAM_CATEGORIES, REVIEW_SCORES } from "@/lib/types"
+import { DEFAULT_FILTERS, STEAM_TAGS, REVIEW_SCORES } from "@/lib/types"
 import { t } from "@/lib/i18n"
 
 interface FilterPanelProps {
@@ -234,20 +234,20 @@ export function FilterPanel({ filters, onChange, onReset, lang }: FilterPanelPro
               </div>
             </FilterSection>
 
-            {/* Genres */}
+            {/* Genres/Tags */}
             <FilterSection 
               title={t(lang, "genres")} 
               icon={<Gamepad2 className="size-4" />}
               isOpen={activeSection === "genres"}
               onToggle={() => toggleSection("genres")}
             >
-              <div className="flex flex-wrap gap-1.5">
-                {STEAM_GENRES.map(genre => (
+              <div className="flex flex-wrap gap-1.5 max-h-60 overflow-y-auto pr-1">
+                {STEAM_TAGS.map(tag => (
                   <ToggleChip
-                    key={genre.id}
-                    active={filters.genres.includes(genre.id)}
-                    onClick={() => toggleGenre(genre.id)}
-                    label={genre.name}
+                    key={tag.id}
+                    active={filters.genres.includes(tag.id)}
+                    onClick={() => toggleGenre(tag.id)}
+                    label={lang === "tr" ? tag.nameTr : tag.name}
                   />
                 ))}
               </div>
