@@ -9,7 +9,9 @@ import { LanguageSwitcher } from "@/components/language-switcher"
 import { GameCard } from "@/components/game-card"
 import { GameSkeleton } from "@/components/game-skeleton"
 import { SocialShare } from "@/components/social-share"
-import type { GameData, Language } from "@/lib/types"
+import { FilterPanel } from "@/components/filter-panel"
+import type { GameData, Language, GameFilters } from "@/lib/types"
+import { DEFAULT_FILTERS } from "@/lib/types"
 import { t } from "@/lib/i18n"
 
 /* ------------------------------------------------------------------ */
@@ -49,17 +51,48 @@ export function AppShell() {
   const [mounted, setMounted] = useState(false)
   const [searchId, setSearchId] = useState("")
   const [searchError, setSearchError] = useState(false)
+  const [filters, setFilters] = useState<GameFilters>(DEFAULT_FILTERS)
   const { setTheme, resolvedTheme } = useTheme()
 
   useEffect(() => { setMounted(true) }, [])
 
-  /* Random game */
+  /* Build filter query string */
+  const buildFilterQuery = useCallback((f: GameFilters): string => {
+    const params = new URLSearchParams()
+    if (f.startingLetter) params.set("startingLetter", f.startingLetter)
+    if (f.freeOnly) params.set("freeOnly", "true")
+    if (f.onSale) params.set("onSale", "true")
+    if (f.priceMin > 0) params.set("priceMin", String(f.priceMin))
+    if (f.priceMax > 0) params.set("priceMax", String(f.priceMax))
+    if (f.genres.length > 0) params.set("genres", f.genres.join(","))
+    if (f.categories.length > 0) params.set("categories", f.categories.join(","))
+    if (f.reviewScore !== "any") params.set("reviewScore", f.reviewScore)
+    if (f.metacriticMin > 0) params.set("metacriticMin", String(f.metacriticMin))
+    if (f.metacriticMax > 0) params.set("metacriticMax", String(f.metacriticMax))
+    if (f.releaseYear > 0) params.set("releaseYear", String(f.releaseYear))
+    if (f.multiplayer === true) params.set("multiplayer", "true")
+    if (f.multiplayer === false) params.set("multiplayer", "false")
+    if (f.earlyAccess === true) params.set("earlyAccess", "true")
+    if (f.turkishSupport) params.set("turkishSupport", "true")
+    if (f.hasAchievements) params.set("hasAchievements", "true")
+    if (f.hasTradingCards) params.set("hasTradingCards", "true")
+    if (f.controllerSupport) params.set("controllerSupport", "true")
+    if (f.vrSupport) params.set("vrSupport", "true")
+    if (f.platforms.windows) params.set("windows", "true")
+    if (f.platforms.mac) params.set("mac", "true")
+    if (f.platforms.linux) params.set("linux", "true")
+    const query = params.toString()
+    return query ? `?${query}` : ""
+  }, [])
+
+  /* Random game with filters */
   const fetchRandomGame = useCallback(async () => {
     setLoading(true)
     setError(false)
     setSearchError(false)
     try {
-      const res = await fetch("/api/steam/random")
+      const query = buildFilterQuery(filters)
+      const res = await fetch(`/api/steam/random${query}`)
       if (!res.ok) throw new Error("Failed")
       const data = await res.json()
       if (data.error) throw new Error(data.error)
@@ -69,7 +102,7 @@ export function AppShell() {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [filters, buildFilterQuery])
 
   /* Search by ID */
   const fetchGameById = useCallback(async (id: string) => {
@@ -120,18 +153,22 @@ export function AppShell() {
         {/* ---- Hero (no game loaded, not loading, no error) ---- */}
         {!gameData && !loading && !error && (
           <section className="flex flex-col items-center gap-10 py-12 md:py-20">
-            {/* Glow orb + icon */}
+            {/* Logo + Glow */}
             <div className="relative animate-fade-in-up">
               <div className="absolute -inset-8 rounded-full bg-primary/20 blur-2xl animate-pulse-ring" />
-              <div className="relative animate-float">
-                <SteamLogo className="size-20 text-primary md:size-24 drop-shadow-[0_0_24px_oklch(0.72_0.12_220/0.5)]" />
+              <div className="relative animate-float flex items-center gap-3">
+                <SteamLogo className="size-16 text-primary md:size-20 drop-shadow-[0_0_24px_oklch(0.72_0.12_220/0.5)]" />
+                <div className="flex flex-col">
+                  <span className="text-2xl font-extrabold text-foreground md:text-3xl">Steam Game</span>
+                  <span className="text-xl font-bold text-primary md:text-2xl">Roulette</span>
+                </div>
               </div>
             </div>
 
             {/* Text */}
             <div className="flex flex-col items-center gap-3 text-center animate-fade-in-up" style={{ animationDelay: "100ms" }}>
-              <h2 className="text-3xl font-extrabold text-foreground md:text-5xl text-balance leading-tight">
-                {t(lang, "title")}
+              <h2 className="text-xl font-semibold text-muted-foreground md:text-2xl text-balance leading-tight">
+                {t(lang, "heroTagline")}
               </h2>
               <p className="text-base text-muted-foreground md:text-lg max-w-md text-pretty">
                 {t(lang, "heroDesc")}
@@ -148,6 +185,16 @@ export function AppShell() {
                 loadingLabel={t(lang, "discovering")}
                 newGameLabel={t(lang, "newGame")}
               />
+
+              {/* Filter Panel */}
+              <div className="w-full max-w-md">
+                <FilterPanel
+                  filters={filters}
+                  onChange={setFilters}
+                  onReset={() => setFilters(DEFAULT_FILTERS)}
+                  lang={lang}
+                />
+              </div>
 
               <span className="text-xs text-muted-foreground">{t(lang, "orText")}</span>
 
@@ -221,6 +268,17 @@ export function AppShell() {
             {/* Controls row */}
             <div className="flex flex-col items-center gap-3">
               <GenerateButton onClick={fetchRandomGame} loading={loading} hasGame={true} discoverLabel={t(lang, "rollDice")} loadingLabel={t(lang, "discovering")} newGameLabel={t(lang, "newGame")} />
+              
+              {/* Filter Panel */}
+              <div className="w-full max-w-md">
+                <FilterPanel
+                  filters={filters}
+                  onChange={setFilters}
+                  onReset={() => setFilters(DEFAULT_FILTERS)}
+                  lang={lang}
+                />
+              </div>
+              
               <div className="flex w-full max-w-sm items-center gap-2">
                 <input
                   type="text"
