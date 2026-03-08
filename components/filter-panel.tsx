@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { 
   ChevronDown, 
   ChevronUp, 
@@ -18,12 +18,17 @@ import {
   Trophy,
   CreditCard,
   Sparkles,
-  Glasses
+  Glasses,
+  Search
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import type { GameFilters, Language } from "@/lib/types"
 import { DEFAULT_FILTERS, STEAM_TAGS, REVIEW_SCORES } from "@/lib/types"
 import { t } from "@/lib/i18n"
+
+// Turkish alphabet collation helper
+const turkishCollator = new Intl.Collator("tr", { sensitivity: "base" })
+const englishCollator = new Intl.Collator("en", { sensitivity: "base" })
 
 interface FilterPanelProps {
   filters: GameFilters
@@ -38,6 +43,28 @@ const YEARS = Array.from({ length: 30 }, (_, i) => new Date().getFullYear() - i)
 export function FilterPanel({ filters, onChange, onReset, lang }: FilterPanelProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [activeSection, setActiveSection] = useState<string | null>(null)
+  const [tagSearch, setTagSearch] = useState("")
+
+  // Sort tags alphabetically based on language and filter by search
+  const sortedAndFilteredTags = useMemo(() => {
+    const collator = lang === "tr" ? turkishCollator : englishCollator
+    
+    // First sort alphabetically by language
+    const sorted = [...STEAM_TAGS].sort((a, b) => {
+      const nameA = lang === "tr" ? a.nameTr : a.name
+      const nameB = lang === "tr" ? b.nameTr : b.name
+      return collator.compare(nameA, nameB)
+    })
+    
+    // Then filter by search term
+    if (!tagSearch.trim()) return sorted
+    
+    const searchLower = tagSearch.toLowerCase()
+    return sorted.filter(tag => {
+      const name = lang === "tr" ? tag.nameTr : tag.name
+      return name.toLowerCase().includes(searchLower)
+    })
+  }, [lang, tagSearch])
 
   const toggleSection = (section: string) => {
     setActiveSection(activeSection === section ? null : section)
@@ -241,15 +268,50 @@ export function FilterPanel({ filters, onChange, onReset, lang }: FilterPanelPro
               isOpen={activeSection === "genres"}
               onToggle={() => toggleSection("genres")}
             >
-              <div className="flex flex-wrap gap-1.5 max-h-60 overflow-y-auto pr-1">
-                {STEAM_TAGS.map(tag => (
-                  <ToggleChip
-                    key={tag.id}
-                    active={filters.genres.includes(tag.id)}
-                    onClick={() => toggleGenre(tag.id)}
-                    label={lang === "tr" ? tag.nameTr : tag.name}
+              <div className="flex flex-col gap-2">
+                {/* Search input */}
+                <div className="relative">
+                  <Search className="absolute left-2 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
+                  <input
+                    type="text"
+                    placeholder={t(lang, "searchTags")}
+                    value={tagSearch}
+                    onChange={(e) => setTagSearch(e.target.value)}
+                    className="w-full pl-7 pr-2 py-1.5 text-xs rounded border bg-secondary placeholder:text-muted-foreground focus:border-primary focus:ring-1 focus:ring-primary outline-none"
                   />
-                ))}
+                  {tagSearch && (
+                    <button
+                      onClick={() => setTagSearch("")}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    >
+                      <X className="size-3" />
+                    </button>
+                  )}
+                </div>
+                
+                {/* Selected tags count */}
+                {filters.genres.length > 0 && (
+                  <p className="text-[10px] text-muted-foreground">
+                    {filters.genres.length} {lang === "tr" ? "seçili" : "selected"}
+                  </p>
+                )}
+                
+                {/* Tags list */}
+                <div className="flex flex-wrap gap-1.5 max-h-60 overflow-y-auto pr-1">
+                  {sortedAndFilteredTags.map(tag => (
+                    <ToggleChip
+                      key={tag.id}
+                      active={filters.genres.includes(tag.id)}
+                      onClick={() => toggleGenre(tag.id)}
+                      label={lang === "tr" ? tag.nameTr : tag.name}
+                    />
+                  ))}
+                  {sortedAndFilteredTags.length === 0 && (
+                    <p className="text-xs text-muted-foreground py-2">
+                      {lang === "tr" ? "Sonuç bulunamadı" : "No results found"}
+                    </p>
+                  )}
+                </div>
               </div>
             </FilterSection>
 

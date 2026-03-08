@@ -3,7 +3,7 @@ import { NextRequest } from "next/server"
 import { getRandomGameId } from "@/lib/steam-games"
 import type { GameFilters } from "@/lib/types"
 
-const MAX_RETRIES = 15
+const MAX_RETRIES = 25
 
 // Parse filters from URL search params
 function parseFilters(searchParams: URLSearchParams): Partial<GameFilters> {
@@ -250,8 +250,9 @@ export async function GET(request: NextRequest) {
     }
   }
 
+  // Return special error type for "no matching game found" - this is NOT a server error
   return NextResponse.json(
-    { error: "Could not find a valid game after multiple attempts." },
-    { status: 500 }
+    { error: "NO_MATCHING_GAME", message: "No game found matching your filters after multiple attempts." },
+    { status: 200 }
   )
 }

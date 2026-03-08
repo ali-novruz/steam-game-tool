@@ -77,6 +77,9 @@ export const translations: Record<Language, Record<string, string>> = {
     hasTradingCards: "Koleksiyon Kartları",
     controllerSupport: "Gamepad Desteği",
     vrSupport: "VR Desteği",
+    searchTags: "Tür ara...",
+    noMatchTitle: "Oyun Bulunamadı",
+    noMatchDesc: "Seçtiğiniz filtrelere uygun oyun bulunamadı. Filtreleri değiştirip tekrar deneyin.",
   },
   en: {
     title: "Steam Game Roulette",
@@ -153,6 +156,9 @@ export const translations: Record<Language, Record<string, string>> = {
     hasTradingCards: "Trading Cards",
     controllerSupport: "Controller Support",
     vrSupport: "VR Support",
+    searchTags: "Search tags...",
+    noMatchTitle: "No Game Found",
+    noMatchDesc: "No game found matching your filters. Try changing your filters and try again.",
   },
 }
 

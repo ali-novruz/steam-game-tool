@@ -52,6 +52,7 @@ export function AppShell() {
   const [searchId, setSearchId] = useState("")
   const [searchError, setSearchError] = useState(false)
   const [filters, setFilters] = useState<GameFilters>(DEFAULT_FILTERS)
+  const [noMatch, setNoMatch] = useState(false)
   const { setTheme, resolvedTheme } = useTheme()
 
   useEffect(() => { setMounted(true) }, [])
@@ -90,11 +91,18 @@ export function AppShell() {
     setLoading(true)
     setError(false)
     setSearchError(false)
+    setNoMatch(false)
     try {
       const query = buildFilterQuery(filters)
       const res = await fetch(`/api/steam/random${query}`)
       if (!res.ok) throw new Error("Failed")
       const data = await res.json()
+      // Check for "no matching game" special error
+      if (data.error === "NO_MATCHING_GAME") {
+        setNoMatch(true)
+        setLoading(false)
+        return
+      }
       if (data.error) throw new Error(data.error)
       setGameData(data)
     } catch {
@@ -236,6 +244,36 @@ export function AppShell() {
                   <span className="text-[10px] uppercase tracking-wider text-muted-foreground">{s.label}</span>
                 </div>
               ))}
+            </div>
+          </section>
+        )}
+
+        {/* ---- No Match Found (different from error) ---- */}
+        {noMatch && !loading && !error && (
+          <section className="flex flex-col items-center justify-center gap-4 py-20 text-center">
+            <div className="flex size-16 items-center justify-center rounded-full bg-warning/10">
+              <Search className="size-8 text-warning" />
+            </div>
+            <h3 className="text-lg font-semibold text-foreground">{t(lang, "noMatchTitle")}</h3>
+            <p className="text-sm text-muted-foreground max-w-sm">{t(lang, "noMatchDesc")}</p>
+            
+            {/* Filter Panel to change filters */}
+            <div className="w-full max-w-md mt-2">
+              <FilterPanel
+                filters={filters}
+                onChange={setFilters}
+                onReset={() => setFilters(DEFAULT_FILTERS)}
+                lang={lang}
+              />
+            </div>
+            
+            <div className="flex gap-2 mt-2">
+              <Button onClick={() => { setFilters(DEFAULT_FILTERS); setNoMatch(false) }} variant="outline">
+                {t(lang, "resetFilters")}
+              </Button>
+              <Button onClick={fetchRandomGame}>
+                {t(lang, "tryAgain")}
+              </Button>
             </div>
           </section>
         )}
