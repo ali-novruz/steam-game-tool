@@ -94,9 +94,12 @@ export function AppShell() {
     setNoMatch(false)
     try {
       const query = buildFilterQuery(filters)
+      console.log("[v0] Fetching random game with query:", query)
       const res = await fetch(`/api/steam/random${query}`)
-      if (!res.ok) throw new Error("Failed")
+      console.log("[v0] Response status:", res.status, res.ok)
+      if (!res.ok) throw new Error("Failed with status " + res.status)
       const data = await res.json()
+      console.log("[v0] Response data:", data.error ? data.error : "Got game: " + data?.game?.name)
       // Check for "no matching game" special error
       if (data.error === "NO_MATCHING_GAME") {
         setNoMatch(true)
@@ -105,7 +108,8 @@ export function AppShell() {
       }
       if (data.error) throw new Error(data.error)
       setGameData(data)
-    } catch {
+    } catch (e) {
+      console.log("[v0] Fetch error:", e)
       setError(true)
     } finally {
       setLoading(false)
