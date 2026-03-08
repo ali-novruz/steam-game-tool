@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils"
 
 interface ScoreBadgeProps {
   score: number
-  type: "metacritic" | "steam"
+  type: "metacritic" | "opencritic" | "steam"
   label: string
   className?: string
 }
@@ -21,6 +21,12 @@ function getSteamColor(reviewScore: number) {
   return "text-steam-negative"
 }
 
+function getOpenCriticColor(score: number) {
+  if (score >= 75) return "bg-emerald-500 text-white"
+  if (score >= 50) return "bg-yellow-500 text-foreground"
+  return "bg-red-500 text-white"
+}
+
 export function ScoreBadge({ score, type, label, className }: ScoreBadgeProps) {
   if (type === "metacritic") {
     return (
@@ -29,6 +35,22 @@ export function ScoreBadge({ score, type, label, className }: ScoreBadgeProps) {
           className={cn(
             "flex size-14 items-center justify-center rounded-lg font-mono text-xl font-bold",
             getMetacriticColor(score)
+          )}
+        >
+          {score}
+        </div>
+        <span className="text-xs text-muted-foreground">{label}</span>
+      </div>
+    )
+  }
+  
+  if (type === "opencritic") {
+    return (
+      <div className={cn("flex flex-col items-center gap-1.5", className)}>
+        <div
+          className={cn(
+            "flex size-14 items-center justify-center rounded-lg font-mono text-xl font-bold",
+            getOpenCriticColor(score)
           )}
         >
           {score}
