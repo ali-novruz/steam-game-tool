@@ -3,7 +3,7 @@ import { NextRequest } from "next/server"
 import { getRandomGameId } from "@/lib/steam-games"
 import type { GameFilters } from "@/lib/types"
 
-const MAX_RETRIES = 60
+const MAX_RETRIES = 20
 
 // Parse filters from URL search params
 function parseFilters(searchParams: URLSearchParams): Partial<GameFilters> {
@@ -313,15 +313,11 @@ export async function GET(request: NextRequest) {
   const filters = parseFilters(searchParams)
   const hasFilters = Object.keys(filters).length > 0
   
-  console.log("[v0] Starting random game fetch, hasFilters:", hasFilters, "filters:", JSON.stringify(filters))
-  
   let attempts = 0
 
   while (attempts < MAX_RETRIES) {
     attempts++
     const appId = getRandomGameId()
-    
-    console.log("[v0] Attempt", attempts, "trying appId:", appId)
 
     try {
       const [detailsRes, reviewsRes] = await Promise.all([
@@ -335,28 +331,17 @@ export async function GET(request: NextRequest) {
         ),
       ])
 
-      if (!detailsRes.ok) {
-        console.log("[v0] Details fetch failed for", appId)
-        continue
-      }
+      if (!detailsRes.ok) continue
 
       const detailsJson = await detailsRes.json()
       const appData = detailsJson[String(appId)]
 
-      if (!appData?.success) {
-        console.log("[v0] App data not successful for", appId)
-        continue
-      }
+      if (!appData?.success) continue
 
       const gameData = appData.data
 
       // Only return actual games (not DLC, software, video, etc.)
-      if (gameData.type !== "game") {
-        console.log("[v0] Skipping non-game type:", gameData.type, "for", appId)
-        continue
-      }
-      
-      console.log("[v0] Found valid game:", gameData.name, "appId:", appId)
+      if (gameData.type !== "game") continue
       
       // Parse reviews
       let reviews = {
@@ -379,11 +364,8 @@ export async function GET(request: NextRequest) {
       
       // Apply filters
       if (hasFilters && !matchesFilters(gameData, reviews, filters)) {
-        console.log("[v0] Game", gameData.name, "didn't match filters, continuing...")
         continue
       }
-      
-      console.log("[v0] Game", gameData.name, "passed all filters! Returning...")
 
       const metacritic = gameData.metacritic || null
       
