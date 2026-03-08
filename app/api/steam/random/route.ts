@@ -3,7 +3,7 @@ import { NextRequest } from "next/server"
 import { getRandomGameId } from "@/lib/steam-games"
 import type { GameFilters } from "@/lib/types"
 
-const MAX_RETRIES = 50
+const MAX_RETRIES = 60
 
 // Parse filters from URL search params
 function parseFilters(searchParams: URLSearchParams): Partial<GameFilters> {
@@ -141,10 +141,14 @@ function matchesFilters(gameData: Record<string, unknown>, reviewData: Record<st
     }
   }
   
-  // Metacritic
+  // Metacritic - only filter if game HAS a metacritic score
   if (filters.metacriticMin || filters.metacriticMax) {
     const metacritic = gameData.metacritic as { score?: number } | undefined
-    const score = metacritic?.score || 0
+    // If game has no metacritic score, skip this game when metacritic filter is set
+    if (!metacritic || metacritic.score === undefined) {
+      return false
+    }
+    const score = metacritic.score
     if (filters.metacriticMin && score < filters.metacriticMin) return false
     if (filters.metacriticMax && score > filters.metacriticMax) return false
   }

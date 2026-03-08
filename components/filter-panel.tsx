@@ -23,7 +23,7 @@ import {
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import type { GameFilters, Language } from "@/lib/types"
-import { DEFAULT_FILTERS, STEAM_TAGS, REVIEW_SCORES } from "@/lib/types"
+import { DEFAULT_FILTERS, STEAM_GENRES, REVIEW_SCORES, TAG_CATEGORIES, STEAMDB_TAGS } from "@/lib/types"
 import { t } from "@/lib/i18n"
 
 // Turkish alphabet collation helper
@@ -45,13 +45,12 @@ export function FilterPanel({ filters, onChange, onReset, lang }: FilterPanelPro
   const [activeSection, setActiveSection] = useState<string | null>(null)
   const [tagSearch, setTagSearch] = useState("")
 
-  // Filter and sort main genre tags only (Steam API only supports filtering on main genres)
-  const mainGenreTags = useMemo(() => {
+  // Filter and sort Steam official genres (used for filtering)
+  const sortedGenres = useMemo(() => {
     const collator = lang === "tr" ? turkishCollator : englishCollator
     const searchLower = tagSearch.toLowerCase().trim()
     
-    // Only include "genre" category tags - these are the only ones Steam API can filter
-    let filtered = STEAM_TAGS.filter(tag => tag.category === "genre")
+    let filtered = [...STEAM_GENRES]
     
     // Filter by search term
     if (searchLower) {
@@ -69,6 +68,36 @@ export function FilterPanel({ filters, onChange, onReset, lang }: FilterPanelPro
     })
     
     return filtered
+  }, [lang, tagSearch])
+  
+  // Group SteamDB tags by category for informational display
+  const groupedTags = useMemo(() => {
+    const collator = lang === "tr" ? turkishCollator : englishCollator
+    const searchLower = tagSearch.toLowerCase().trim()
+    
+    const groups: Record<string, typeof STEAMDB_TAGS> = {}
+    
+    for (const tag of STEAMDB_TAGS) {
+      // Filter by search
+      if (searchLower) {
+        const name = lang === "tr" ? tag.nameTr : tag.name
+        if (!name.toLowerCase().includes(searchLower)) continue
+      }
+      
+      if (!groups[tag.category]) groups[tag.category] = []
+      groups[tag.category].push(tag)
+    }
+    
+    // Sort each group
+    for (const cat of Object.keys(groups)) {
+      groups[cat].sort((a, b) => {
+        const nameA = lang === "tr" ? a.nameTr : a.name
+        const nameB = lang === "tr" ? b.nameTr : b.name
+        return collator.compare(nameA, nameB)
+      })
+    }
+    
+    return groups
   }, [lang, tagSearch])
   
 
@@ -296,19 +325,53 @@ export function FilterPanel({ filters, onChange, onReset, lang }: FilterPanelPro
                   </p>
                 )}
                 
-                {/* Main genre tags only - Steam API limitation */}
-                <div className="flex flex-wrap gap-1.5 max-h-60 overflow-y-auto pr-1">
-                  {mainGenreTags.map(tag => (
-                    <ToggleChip
-                      key={tag.id}
-                      active={filters.genres.includes(tag.id)}
-                      onClick={() => toggleGenre(tag.id)}
-                      label={lang === "tr" ? tag.nameTr : tag.name}
-                    />
-                  ))}
-                  {mainGenreTags.length === 0 && (
+                {/* Steam official genres - these are filterable */}
+                <div className="flex flex-col gap-3 max-h-80 overflow-y-auto pr-1">
+                  {/* Main Genres Section */}
+                  <div>
+                    <span className="text-[10px] font-semibold text-primary uppercase tracking-wide mb-1.5 block">
+                      {lang === "tr" ? "Ana Türler (Filtrelenebilir)" : "Main Genres (Filterable)"}
+                    </span>
+                    <div className="flex flex-wrap gap-1">
+                      {sortedGenres.map(tag => (
+                        <ToggleChip
+                          key={tag.id}
+                          active={filters.genres.includes(tag.id)}
+                          onClick={() => toggleGenre(tag.id)}
+                          label={lang === "tr" ? tag.nameTr : tag.name}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                  
+                  {/* SteamDB Tags by Category - informational only */}
+                  {TAG_CATEGORIES.filter(c => c.id !== "genre").map(category => {
+                    const tags = groupedTags[category.id]
+                    if (!tags || tags.length === 0) return null
+                    
+                    return (
+                      <div key={category.id}>
+                        <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">
+                          {lang === "tr" ? category.nameTr : category.name}
+                        </span>
+                        <div className="flex flex-wrap gap-1">
+                          {tags.map(tag => (
+                            <span
+                              key={tag.id}
+                              className="px-2 py-0.5 text-[11px] rounded bg-secondary/50 text-muted-foreground cursor-default"
+                              title={lang === "tr" ? "Bu etiket Steam API tarafından filtrelenemiyor" : "This tag cannot be filtered via Steam API"}
+                            >
+                              {lang === "tr" ? tag.nameTr : tag.name}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )
+                  })}
+                  
+                  {sortedGenres.length === 0 && Object.keys(groupedTags).length === 0 && (
                     <p className="text-xs text-muted-foreground py-2">
-                      {lang === "tr" ? "Sonuc bulunamadi" : "No results found"}
+                      {lang === "tr" ? "Sonuç bulunamadı" : "No results found"}
                     </p>
                   )}
                 </div>
