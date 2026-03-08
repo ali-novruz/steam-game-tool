@@ -88,28 +88,38 @@ export function AppShell() {
 
   /* Random game with filters */
   const fetchRandomGame = useCallback(async () => {
+    // Reset all states before fetching
     setLoading(true)
     setError(false)
     setSearchError(false)
     setNoMatch(false)
+    
     try {
       const query = buildFilterQuery(filters)
-      console.log("[v0] Fetching random game with query:", query)
       const res = await fetch(`/api/steam/random${query}`)
-      console.log("[v0] Response status:", res.status, res.ok)
-      if (!res.ok) throw new Error("Failed with status " + res.status)
+      
+      if (!res.ok) {
+        throw new Error("Failed with status " + res.status)
+      }
+      
       const data = await res.json()
-      console.log("[v0] Response data:", data.error ? data.error : "Got game: " + data?.game?.name)
+      
       // Check for "no matching game" special error
       if (data.error === "NO_MATCHING_GAME") {
+        setGameData(null) // Clear previous game data
         setNoMatch(true)
-        setLoading(false)
         return
       }
-      if (data.error) throw new Error(data.error)
+      
+      if (data.error) {
+        throw new Error(data.error)
+      }
+      
+      // Success - set game data and clear noMatch
+      setNoMatch(false)
       setGameData(data)
-    } catch (e) {
-      console.log("[v0] Fetch error:", e)
+    } catch {
+      setGameData(null) // Clear previous game data on error
       setError(true)
     } finally {
       setLoading(false)
@@ -162,8 +172,8 @@ export function AppShell() {
       </header>
 
       <main className="mx-auto max-w-4xl px-4 py-6 md:py-10">
-        {/* ---- Hero (no game loaded, not loading, no error) ---- */}
-        {!gameData && !loading && !error && (
+        {/* ---- Hero (no game loaded, not loading, no error, no noMatch) ---- */}
+        {!gameData && !loading && !error && !noMatch && (
           <section className="flex flex-col items-center gap-10 py-12 md:py-20">
             {/* Logo + Glow */}
             <div className="relative animate-fade-in-up">
