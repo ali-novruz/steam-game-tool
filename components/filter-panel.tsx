@@ -344,7 +344,7 @@ export function FilterPanel({ filters, onChange, onReset, lang }: FilterPanelPro
                     </div>
                   </div>
                   
-                  {/* SteamDB Tags by Category - informational only */}
+                  {/* SteamDB Tags by Category - all selectable */}
                   {TAG_CATEGORIES.filter(c => c.id !== "genre").map(category => {
                     const tags = groupedTags[category.id]
                     if (!tags || tags.length === 0) return null
@@ -356,13 +356,12 @@ export function FilterPanel({ filters, onChange, onReset, lang }: FilterPanelPro
                         </span>
                         <div className="flex flex-wrap gap-1">
                           {tags.map(tag => (
-                            <span
+                            <ToggleChip
                               key={tag.id}
-                              className="px-2 py-0.5 text-[11px] rounded bg-secondary/50 text-muted-foreground cursor-default"
-                              title={lang === "tr" ? "Bu etiket Steam API tarafından filtrelenemiyor" : "This tag cannot be filtered via Steam API"}
-                            >
-                              {lang === "tr" ? tag.nameTr : tag.name}
-                            </span>
+                              active={filters.genres.includes(tag.id)}
+                              onClick={() => toggleGenre(tag.id)}
+                              label={lang === "tr" ? tag.nameTr : tag.name}
+                            />
                           ))}
                         </div>
                       </div>
