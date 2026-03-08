@@ -94,9 +94,17 @@ export function AppShell() {
     setSearchError(false)
     setNoMatch(false)
     
+    // Create AbortController for timeout
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 25000) // 25 second timeout
+    
     try {
       const query = buildFilterQuery(filters)
-      const res = await fetch(`/api/steam/random${query}`)
+      const res = await fetch(`/api/steam/random${query}`, {
+        signal: controller.signal
+      })
+      
+      clearTimeout(timeoutId)
       
       if (!res.ok) {
         throw new Error("Failed with status " + res.status)
@@ -118,9 +126,16 @@ export function AppShell() {
       // Success - set game data and clear noMatch
       setNoMatch(false)
       setGameData(data)
-    } catch {
+    } catch (err) {
+      clearTimeout(timeoutId)
       setGameData(null) // Clear previous game data on error
-      setError(true)
+      
+      // Check if it was a timeout/abort
+      if (err instanceof Error && err.name === 'AbortError') {
+        setNoMatch(true) // Treat timeout as "no match found"
+      } else {
+        setError(true)
+      }
     } finally {
       setLoading(false)
     }
