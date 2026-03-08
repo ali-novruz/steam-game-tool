@@ -56,3 +56,109 @@ export interface GameData {
 }
 
 export type Language = "tr" | "en"
+
+/* ------------------------------------------------------------------ */
+/*  Filter Types                                                       */
+/* ------------------------------------------------------------------ */
+export interface GameFilters {
+  startingLetter: string // A-Z or "" for any
+  priceMin: number // 0 for no minimum
+  priceMax: number // 0 for no maximum
+  freeOnly: boolean
+  onSale: boolean
+  genres: string[] // multi-select genre IDs
+  categories: string[] // multi-select category IDs
+  platforms: {
+    windows: boolean
+    mac: boolean
+    linux: boolean
+  }
+  metacriticMin: number // 0-100, 0 for no minimum
+  metacriticMax: number // 0-100, 0 for no maximum
+  reviewScore: string // "any" | "positive" | "very_positive" | "overwhelmingly_positive" | "mixed" | "negative"
+  releaseYear: number // 0 for any year
+  multiplayer: boolean | null // null = any, true = multiplayer, false = singleplayer only
+  earlyAccess: boolean | null // null = any, true = only early access, false = exclude early access
+  turkishSupport: boolean // only games with Turkish language support
+  hasAchievements: boolean
+  hasTradingCards: boolean
+  controllerSupport: boolean
+  vrSupport: boolean
+}
+
+export const DEFAULT_FILTERS: GameFilters = {
+  startingLetter: "",
+  priceMin: 0,
+  priceMax: 0,
+  freeOnly: false,
+  onSale: false,
+  genres: [],
+  categories: [],
+  platforms: {
+    windows: false,
+    mac: false,
+    linux: false,
+  },
+  metacriticMin: 0,
+  metacriticMax: 0,
+  reviewScore: "any",
+  releaseYear: 0,
+  multiplayer: null,
+  earlyAccess: null,
+  turkishSupport: false,
+  hasAchievements: false,
+  hasTradingCards: false,
+  controllerSupport: false,
+  vrSupport: false,
+}
+
+// Common Steam genres
+export const STEAM_GENRES = [
+  { id: "1", name: "Action" },
+  { id: "25", name: "Adventure" },
+  { id: "2", name: "Strategy" },
+  { id: "3", name: "RPG" },
+  { id: "4", name: "Casual" },
+  { id: "23", name: "Indie" },
+  { id: "28", name: "Simulation" },
+  { id: "9", name: "Racing" },
+  { id: "18", name: "Sports" },
+  { id: "37", name: "Free to Play" },
+  { id: "70", name: "Early Access" },
+  { id: "51", name: "Animation & Modeling" },
+  { id: "58", name: "Video Production" },
+  { id: "56", name: "Software Training" },
+]
+
+// Common Steam categories
+export const STEAM_CATEGORIES = [
+  { id: "2", name: "Single-player" },
+  { id: "1", name: "Multi-player" },
+  { id: "49", name: "PvP" },
+  { id: "36", name: "Online PvP" },
+  { id: "9", name: "Co-op" },
+  { id: "38", name: "Online Co-op" },
+  { id: "22", name: "Steam Achievements" },
+  { id: "29", name: "Steam Trading Cards" },
+  { id: "28", name: "Full controller support" },
+  { id: "18", name: "Partial Controller Support" },
+  { id: "13", name: "Captions available" },
+  { id: "31", name: "VR Support" },
+  { id: "23", name: "Steam Cloud" },
+  { id: "8", name: "Valve Anti-Cheat enabled" },
+  { id: "30", name: "Steam Workshop" },
+  { id: "35", name: "In-App Purchases" },
+]
+
+// Review score options
+export const REVIEW_SCORES = [
+  { value: "any", labelTr: "Hepsi", labelEn: "Any" },
+  { value: "overwhelmingly_positive", labelTr: "Ezici Olumlu", labelEn: "Overwhelmingly Positive" },
+  { value: "very_positive", labelTr: "Çok Olumlu", labelEn: "Very Positive" },
+  { value: "positive", labelTr: "Olumlu", labelEn: "Positive" },
+  { value: "mostly_positive", labelTr: "Çoğunlukla Olumlu", labelEn: "Mostly Positive" },
+  { value: "mixed", labelTr: "Karışık", labelEn: "Mixed" },
+  { value: "mostly_negative", labelTr: "Çoğunlukla Olumsuz", labelEn: "Mostly Negative" },
+  { value: "negative", labelTr: "Olumsuz", labelEn: "Negative" },
+  { value: "very_negative", labelTr: "Çok Olumsuz", labelEn: "Very Negative" },
+]
