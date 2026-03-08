@@ -121,7 +121,122 @@ function matchesFilters(gameData: Record<string, unknown>, reviewData: Record<st
         }
       }
     }
-    // Non-main genre filters (themes, subgenres, etc.) are ignored since Steam API doesn't provide this data
+    // For non-main genre filters (themes, subgenres, etc.), try text-based matching
+    // in the game's description since Steam API doesn't provide tag data
+    const nonMainGenreFilters = filters.genres.filter(id => !mainGenreIds.has(id))
+    
+    if (nonMainGenreFilters.length > 0) {
+      // Get game description text for matching
+      const descriptionText = [
+        gameData.short_description || "",
+        gameData.detailed_description || "",
+        ...(gameGenres.map(g => g.description) || [])
+      ].join(" ").toLowerCase()
+      
+      // Import tag names for matching - we'll match against English names
+      const tagNameMap: Record<string, string[]> = {
+        // Themes
+        "4166": ["atmospheric", "atmosphere"],
+        "1667": ["horror", "scary", "terrifying"],
+        "4136": ["comedy", "funny", "humor"],
+        "1684": ["fantasy", "magic", "magical"],
+        "3942": ["sci-fi", "science fiction", "futuristic"],
+        "1662": ["survival"],
+        "21978": ["dark", "darkness"],
+        "4604": ["dark fantasy"],
+        "16689": ["lovecraftian", "lovecraft", "cosmic horror"],
+        "5611": ["psychological", "psychological horror"],
+        "1721": ["zombies", "zombie"],
+        "1645": ["mystery", "mysterious"],
+        "5984": ["demons", "demonic"],
+        "7208": ["female protagonist"],
+        "4295": ["robots", "robot"],
+        "1738": ["ninja"],
+        "4085": ["anime"],
+        "1654": ["relaxing", "relax"],
+        "5154": ["steampunk"],
+        "4057": ["cyberpunk", "cyber"],
+        "1659": ["post-apocalyptic", "apocalypse"],
+        "4018": ["economy", "economic"],
+        "4115": ["assassin"],
+        "3987": ["historical", "history"],
+        "5608": ["emotional"],
+        "7432": ["lovecraftian"],
+        "4106": ["romance", "romantic"],
+        "15045": ["choices matter", "choices"],
+        "1742": ["turn-based", "turn based"],
+        "1774": ["shooting", "shooter"],
+        "4252": ["comic book"],
+        "6815": ["hand-drawn", "hand drawn"],
+        "4726": ["cute"],
+        "7481": ["controller support", "controller"],
+        
+        // Subgenres
+        "1697": ["roguelike", "rogue-like"],
+        "3959": ["roguelite", "rogue-lite"],
+        "1702": ["crafting", "craft"],
+        "1628": ["metroidvania"],
+        "3834": ["souls-like", "soulslike", "souls like"],
+        "21725": ["deckbuilding", "deck building", "deck-building"],
+        "1695": ["open world"],
+        "1664": ["puzzle"],
+        "1625": ["platformer", "platform"],
+        "1698": ["building", "build"],
+        "1752": ["tower defense"],
+        "1677": ["turn-based strategy"],
+        "1708": ["tactical"],
+        "4325": ["city builder"],
+        "1676": ["rts", "real-time strategy"],
+        "1770": ["board game"],
+        "4434": ["moba"],
+        "3993": ["visual novel"],
+        "4486": ["exploration", "explore"],
+        "7250": ["sandbox"],
+        "17894": ["battle royale"],
+        "3978": ["card game"],
+        
+        // Visual/Art styles
+        "4305": ["2d"],
+        "4791": ["3d"],
+        "7332": ["pixel graphics", "pixel art", "pixelated"],
+        "4400": ["first-person", "first person"],
+        "1697": ["third-person", "third person"],
+        "4004": ["retro"],
+        "8093": ["minimalist", "minimal"],
+        "5716": ["stylized"],
+        "5411": ["beautiful", "gorgeous"],
+        "7948": ["colorful"],
+        
+        // Players
+        "1775": ["pvp", "versus"],
+        "1738": ["pve"],
+        "3841": ["local multiplayer", "local co-op"],
+        "3843": ["online co-op", "online multiplayer"],
+        "4182": ["singleplayer", "single player", "single-player"],
+        "128": ["multiplayer", "multi-player"],
+        "1685": ["co-op", "coop", "cooperative"],
+        
+        // Features
+        "5752": ["great soundtrack", "soundtrack"],
+        "1756": ["procedural", "randomly generated"],
+        "7113": ["replay value", "replayability"],
+        "8122": ["story rich", "narrative"],
+        "4758": ["perma death", "permadeath"],
+      }
+      
+      // Check if any non-main tag matches game description
+      const hasTagMatch = nonMainGenreFilters.some(tagId => {
+        const keywords = tagNameMap[tagId]
+        if (keywords) {
+          return keywords.some(keyword => descriptionText.includes(keyword))
+        }
+        return true // If we don't have a mapping, don't reject
+      })
+      
+      if (!hasTagMatch) {
+        return false
+      }
+    }
   }
   
   // Platforms
