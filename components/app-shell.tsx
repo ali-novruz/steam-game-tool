@@ -103,12 +103,13 @@ export function AppShell() {
     
     // Create AbortController for timeout
     const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 25000) // 25 second timeout
+    const timeoutId = setTimeout(() => controller.abort(), 30000) // 30 second timeout
     
     try {
       const query = buildFilterQuery(filters)
       const res = await fetch(`/api/steam/random${query}`, {
-        signal: controller.signal
+        signal: controller.signal,
+        cache: 'no-store'
       })
       
       clearTimeout(timeoutId)
@@ -132,17 +133,12 @@ export function AppShell() {
       // Check for "no matching game" special error
       if (data.error === "NO_MATCHING_GAME") {
         setNoMatch(true)
-        setLoading(false)
-        return
+      } else if (data.error) {
+        setError(true)
+      } else {
+        // Success - set game data
+        setGameData(data)
       }
-      
-      if (data.error) {
-        throw new Error(data.error)
-      }
-      
-      // Success - set game data
-      setGameData(data)
-      setLoading(false)
     } catch (err) {
       clearTimeout(timeoutId)
       
@@ -157,7 +153,11 @@ export function AppShell() {
       } else {
         setError(true)
       }
-      setLoading(false)
+    } finally {
+      // Always set loading to false at the end (unless stale)
+      if (currentRequestId === requestIdRef.current) {
+        setLoading(false)
+      }
     }
   }, [filters, buildFilterQuery])
 
@@ -320,7 +320,7 @@ export function AppShell() {
               <Button onClick={() => { setFilters(DEFAULT_FILTERS); setNoMatch(false) }} variant="outline">
                 {t(lang, "resetFilters")}
               </Button>
-              <Button onClick={() => { setNoMatch(false); setTimeout(fetchRandomGame, 0) }}>
+              <Button onClick={fetchRandomGame}>
                 {t(lang, "tryAgain")}
               </Button>
             </div>
@@ -335,7 +335,7 @@ export function AppShell() {
             </div>
             <h3 className="text-lg font-semibold text-foreground">{t(lang, "errorTitle")}</h3>
             <p className="text-sm text-muted-foreground max-w-sm">{t(lang, "errorDesc")}</p>
-            <Button onClick={() => { setError(false); setTimeout(fetchRandomGame, 0) }} variant="outline">{t(lang, "tryAgain")}</Button>
+            <Button onClick={fetchRandomGame} variant="outline">{t(lang, "tryAgain")}</Button>
           </section>
         )}
 

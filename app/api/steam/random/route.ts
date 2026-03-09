@@ -3,8 +3,8 @@ import { NextRequest } from "next/server"
 import { getRandomGameId } from "@/lib/steam-games"
 import type { GameFilters } from "@/lib/types"
 
-const MAX_RETRIES = 15 // Number of rounds
-const PARALLEL_CHECKS = 5 // Check 5 games per round = 75 total games checked
+const MAX_RETRIES = 10 // Number of rounds
+const PARALLEL_CHECKS = 8 // Check 8 games per round = 80 total games checked
 
 // Parse filters from URL search params
 function parseFilters(searchParams: URLSearchParams): Partial<GameFilters> {
