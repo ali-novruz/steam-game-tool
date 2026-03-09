@@ -310,7 +310,7 @@ function matchesFilters(gameData: Record<string, unknown>, reviewData: Record<st
 }
 
 // Helper to check a single game
-async function checkGame(appId: number, filters: ReturnType<typeof parseFilters>, hasFilters: boolean) {
+async function checkGame(appId: number, filters: ReturnType<typeof parseFilters>, hasFilters: boolean): Promise<{ gameData: Record<string, unknown>; reviews: Record<string, unknown> } | null> {
   try {
     const [detailsRes, reviewsRes] = await Promise.all([
       fetch(
@@ -323,17 +323,29 @@ async function checkGame(appId: number, filters: ReturnType<typeof parseFilters>
       ),
     ])
 
-    if (!detailsRes.ok) return null
+    if (!detailsRes.ok) {
+      console.log(`[v0] appId ${appId}: details fetch failed`)
+      return null
+    }
 
     const detailsJson = await detailsRes.json()
     const appData = detailsJson[String(appId)]
 
-    if (!appData?.success) return null
+    if (!appData?.success) {
+      console.log(`[v0] appId ${appId}: appData not success`)
+      return null
+    }
 
     const gameData = appData.data
 
     // Only return actual games (not DLC, software, video, etc.)
-    if (gameData.type !== "game") return null
+    if (gameData.type !== "game") {
+      console.log(`[v0] appId ${appId}: type is ${gameData.type}, not game`)
+      return null
+    }
+    
+    console.log(`[v0] appId ${appId}: found valid game "${gameData.name}"`)
+    
     
     // Parse reviews
     let reviews = {
@@ -356,9 +368,11 @@ async function checkGame(appId: number, filters: ReturnType<typeof parseFilters>
     
     // Apply filters
     if (hasFilters && !matchesFilters(gameData, reviews, filters)) {
+      console.log(`[v0] appId ${appId}: "${gameData.name}" didn't match filters`)
       return null
     }
-
+    
+    console.log(`[v0] appId ${appId}: "${gameData.name}" PASSED all checks!`)
     return { gameData, reviews }
   } catch {
     return null
@@ -373,6 +387,8 @@ export async function GET(request: NextRequest) {
   // Track which IDs we've tried to avoid duplicates
   const triedIds = new Set<number>()
 
+  console.log(`[v0] Starting game search, hasFilters: ${hasFilters}, filters: ${JSON.stringify(filters)}`)
+  
   for (let round = 0; round < MAX_RETRIES; round++) {
     // Get unique random IDs for this round
     const appIds: number[] = []
@@ -386,10 +402,15 @@ export async function GET(request: NextRequest) {
       if (triedIds.size > 1000) break
     }
     
+    console.log(`[v0] Round ${round + 1}/${MAX_RETRIES}, checking appIds: ${appIds.join(', ')}`)
+    
     // Check all games in parallel
     const results = await Promise.all(
       appIds.map(id => checkGame(id, filters, hasFilters))
     )
+    
+    const validCount = results.filter(r => r !== null).length
+    console.log(`[v0] Round ${round + 1}: ${validCount}/${appIds.length} valid results`)
     
     // Find first valid result
     const validResult = results.find(r => r !== null)
@@ -473,6 +494,7 @@ export async function GET(request: NextRequest) {
   }
 
   // Return special error type for "no matching game found" - this is NOT a server error
+  console.log(`[v0] NO_MATCHING_GAME after ${MAX_RETRIES} rounds (${triedIds.size} games checked)`)
   return NextResponse.json(
     { error: "NO_MATCHING_GAME", message: "No game found matching your filters after multiple attempts." },
     { status: 200 }
