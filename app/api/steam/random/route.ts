@@ -3,9 +3,9 @@ import { NextRequest } from "next/server"
 import { getRandomGameId } from "@/lib/steam-games"
 import type { GameFilters } from "@/lib/types"
 
-const MAX_RETRIES = 15 // Number of rounds
-const PARALLEL_CHECKS = 3 // Check 3 games per round = 45 total games checked
-const FETCH_TIMEOUT = 5000 // 5 second timeout per fetch
+const MAX_RETRIES = 20 // Number of rounds - increased for better coverage
+const PARALLEL_CHECKS = 3 // Check 3 games per round = 60 total games checked
+const FETCH_TIMEOUT = 8000 // 8 second timeout per fetch (increased from 5)
 
 // Helper to fetch with timeout
 async function fetchWithTimeout(url: string, options: RequestInit = {}, timeout = FETCH_TIMEOUT): Promise<Response> {
@@ -328,39 +328,55 @@ function matchesFilters(gameData: Record<string, unknown>, reviewData: Record<st
   return true
 }
 
-// Helper to check a single game
+// Helper to check a single game with better error handling
 async function checkGame(appId: number, filters: ReturnType<typeof parseFilters>, hasFilters: boolean): Promise<{ gameData: Record<string, unknown>; reviews: Record<string, unknown> } | null> {
   try {
-    const [detailsRes, reviewsRes] = await Promise.all([
-      fetchWithTimeout(
-        `https://store.steampowered.com/api/appdetails?appids=${appId}&cc=us&l=english`,
-        { cache: 'no-store' }
-      ),
-      fetchWithTimeout(
-        `https://store.steampowered.com/appreviews/${appId}?json=1&language=all&purchase_type=all&num_per_page=0`,
-        { cache: 'no-store' }
-      ),
-    ])
+    let detailsRes: Response
+    let reviewsRes: Response
+    
+    try {
+      const [details, reviews] = await Promise.all([
+        fetchWithTimeout(
+          `https://store.steampowered.com/api/appdetails?appids=${appId}&cc=us&l=english`,
+          { cache: 'no-store' },
+          FETCH_TIMEOUT
+        ),
+        fetchWithTimeout(
+          `https://store.steampowered.com/appreviews/${appId}?json=1&language=all&purchase_type=all&num_per_page=0`,
+          { cache: 'no-store' },
+          FETCH_TIMEOUT
+        ),
+      ])
+      detailsRes = details
+      reviewsRes = reviews
+    } catch (fetchError) {
+      // If fetch fails (timeout or network error), skip this game
+      return null
+    }
 
     if (!detailsRes.ok) {
       return null
     }
 
-    const detailsJson = await detailsRes.json()
+    let detailsJson: Record<string, unknown>
+    try {
+      detailsJson = await detailsRes.json()
+    } catch {
+      return null
+    }
+    
     const appData = detailsJson[String(appId)]
 
     if (!appData?.success) {
       return null
     }
 
-    const gameData = appData.data
+    const gameData = appData.data as Record<string, unknown>
 
     // Only return actual games (not DLC, software, video, etc.)
     if (gameData.type !== "game") {
       return null
     }
-    
-    
     // Parse reviews
     let reviews = {
       num_reviews: 0,
