@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback, useEffect, useRef } from "react"
+import { useState, useCallback, useEffect } from "react"
 import { useTheme } from "next-themes"
 import { Moon, Sun, AlertCircle, Search, Dices, Gamepad2, Share2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -54,9 +54,6 @@ export function AppShell() {
   const [filters, setFilters] = useState<GameFilters>(DEFAULT_FILTERS)
   const [noMatch, setNoMatch] = useState(false)
   const { setTheme, resolvedTheme } = useTheme()
-  
-  // Track current request to ignore stale responses
-  const requestIdRef = useRef(0)
 
   useEffect(() => { setMounted(true) }, [])
 
@@ -91,44 +88,24 @@ export function AppShell() {
 
   /* Random game with filters */
   const fetchRandomGame = useCallback(async () => {
-    // Increment request ID to track this specific request
-    const currentRequestId = ++requestIdRef.current
-    
     // Reset all states before fetching
     setLoading(true)
     setError(false)
     setSearchError(false)
     setNoMatch(false)
-    setGameData(null) // Clear previous game data immediately
-    
-    // Create AbortController for timeout
-    const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 30000) // 30 second timeout
+    setGameData(null)
     
     try {
       const query = buildFilterQuery(filters)
       const res = await fetch(`/api/steam/random${query}`, {
-        signal: controller.signal,
         cache: 'no-store'
       })
-      
-      clearTimeout(timeoutId)
-      
-      // Ignore if this is a stale request
-      if (currentRequestId !== requestIdRef.current) {
-        return
-      }
       
       if (!res.ok) {
         throw new Error("Failed with status " + res.status)
       }
       
       const data = await res.json()
-      
-      // Ignore if this is a stale request
-      if (currentRequestId !== requestIdRef.current) {
-        return
-      }
       
       // Check for "no matching game" special error
       if (data.error === "NO_MATCHING_GAME") {
@@ -139,25 +116,10 @@ export function AppShell() {
         // Success - set game data
         setGameData(data)
       }
-    } catch (err) {
-      clearTimeout(timeoutId)
-      
-      // Ignore if this is a stale request
-      if (currentRequestId !== requestIdRef.current) {
-        return
-      }
-      
-      // Check if it was a timeout/abort
-      if (err instanceof Error && err.name === 'AbortError') {
-        setNoMatch(true) // Treat timeout as "no match found"
-      } else {
-        setError(true)
-      }
+    } catch {
+      setError(true)
     } finally {
-      // Always set loading to false at the end (unless stale)
-      if (currentRequestId === requestIdRef.current) {
-        setLoading(false)
-      }
+      setLoading(false)
     }
   }, [filters, buildFilterQuery])
 
